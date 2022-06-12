@@ -1,0 +1,11 @@
+ipt
+opt
+out
+*.png
+*.jpg
+*.json
+*.ttf
+temp_*
+*.exe
+*.ini
+*.conf
