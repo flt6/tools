@@ -1,0 +1,44 @@
+name: Gen Excute File
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v3.0.0
+        with:
+          python-version: 3.8
+      - name: Install Pyinstaller
+        run: |
+          pip install Pyinstaller
+      - name: Package
+        run: |
+          Pyinstaller -F ./main
+      - name: Simple Upload to Release
+        uses: Guerra24/upload-to-release@v1.0.0
+        with:
+          name: Linux_version
+          path: dist/main
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v3.0.0
+        with:
+          python-version: 3.8
+      - name: Install Pyinstaller
+        run: |
+          pip install Pyinstaller
+      - name: Package
+        run: |
+          Pyinstaller -F ./main
+      - name: Simple Upload to Release
+        uses: Guerra24/upload-to-release@v1.0.0
+        with:
+          name: Windows_version
+          path: dist/main.exe
+
