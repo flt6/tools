@@ -1,6 +1,20 @@
 import requests
 from time import strftime
-from re import search
+from re import findall
+
+HTML_FORMAT ='''
+<html>
+
+<head>
+<titile>{title}</titile>
+</head>
+
+<body>
+{body}
+</body>
+
+</html>
+'''
 
 def writefile(filename,text):
     with open(filename+'.html', 'w') as f:
@@ -32,9 +46,21 @@ def main():
         rar=ret['rarPreviewInfo']
         for file in rar:
             html=file["Html"]
+            title=file["SoftName"]
             # replace "data-original" to "src" for showing in browser
-            html=html.replace("data-original", "src")
-            writefile(file["SoftName"],html)
+            # html=html.replace("data-original", "src")
+            urls=findall("(?<=data-original=\")https://preview.xkw.com/.+(?=\")",html)
+            l=[]
+            for url in urls:
+                page=requests.get(url,cookies=response.cookies)
+                if not page.status_code==200:
+                    print(page)
+                    print(page.status_code)
+                    print(page.text)
+                assert page.status_code==200
+                l.append(page.text)
+            format_html=HTML_FORMAT.format(title=title,body="\n".join(l))
+            writefile(title,format_html)
 
 if __name__  == "__main__":
     main()
