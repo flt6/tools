@@ -3,16 +3,26 @@
 
 <head>
 <meta charset="utf-8">
+<title>姓名代码查询</title>
+<style>
+    #a{
+        align-self: center;
+    }
+    #ans{
+        text-align: center;
+    }
+</style>
 <script type="text/javascript" src="brython.js"></script>
 <script type="text/javascript" src="brython_stdlib.js"></script>
 </head>
 
 <body onload="brython(1)">
+    <h1>输入姓名（一行），点击“确认”显示代码。</h1>
     <div id="a">
         <input id="name"></input>
         <button id="check">确认</button></div>
     <div>
-        <label id="ans">None</label>
+        <label id="ans"></label>
     </div>
 <script type="text/python">
     from browser import document
