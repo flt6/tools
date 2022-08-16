@@ -1,6 +1,6 @@
 import requests
 from time import strftime
-from re import findall
+import re
 
 HTML_FORMAT ='''
 <html>
@@ -17,13 +17,14 @@ HTML_FORMAT ='''
 '''
 
 def writefile(filename,text):
+    filename=re.sub(r'''[\*\/\\\|\<\>\? \:\.\'\"\!]''',"",filename)
     with open(filename+'.html', 'w') as f:
         f.write(text)
 
 
 def main():
     softID=input("ID: ")
-    url = "https://www.zxxk.com/soft/Preview/FirstLoadPreviewJson?softID={}&type=3&product=1&v=2&FullPreview=true"
+    url = "https://www.zxxk.com/soft/Preview/FirstLoadPreviewJson?softID={}&fileaddress=&type=3&product=1&v=2&FullPreview=true"
     response = requests.get(url.format(softID))
     if response.status_code!=200:
         print("ERROR")
@@ -37,7 +38,7 @@ def main():
         print("Not rar")
         print("TotalPage=%d" % ret['TotalPage'])
         print("SoftExt=%s" % ret['SoftExt'])
-        html=response["Html"]
+        html=ret["Html"]
         # replace "data-original" to "src" for showing in browser
         html=html.replace("data-original", "src")
         writefile(strftime("%Y%m%d-%H:%M"),html)
@@ -48,19 +49,20 @@ def main():
             html=file["Html"]
             title=file["SoftName"]
             # replace "data-original" to "src" for showing in browser
-            # html=html.replace("data-original", "src")
-            urls=findall("(?<=data-original=\")https://preview.xkw.com/.+(?=\")",html)
-            l=[]
-            for url in urls:
-                page=requests.get(url,cookies=response.cookies)
-                if not page.status_code==200:
-                    print(page)
-                    print(page.status_code)
-                    print(page.text)
-                assert page.status_code==200
-                l.append(page.text)
-            format_html=HTML_FORMAT.format(title=title,body="\n".join(l))
-            writefile(title,format_html)
+            html=html.replace("data-original", "src")
+            # urls=findall("(?<=data-original=\")https://preview.xkw.com/.+(?=\")",html)
+            # l=[]
+            # for url in urls:
+            #     page=requests.get(url,cookies=response.cookies)
+            #     if not page.status_code==200:
+            #         print(page)
+            #         print(page.status_code)
+            #         print(page.text)
+            #     print(page)
+            #     assert page.status_code==200
+            #     l.append(page.text)
+            # format_html=HTML_FORMAT.format(title=title,body="\n".join(l))
+            writefile(title,html)
 
 if __name__  == "__main__":
     main()
