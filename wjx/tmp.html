@@ -1,0 +1,275 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head id="Head1"><title>
+	登录页面_问卷星
+</title><meta http-equiv="X-UA-Compatible" content="IE=EmulateIE10" /><meta name="renderer" content="webkit" /><link href="/wjxUI/src/wjxUI.css?v=13" rel="stylesheet" /><link rel="stylesheet" href="/css/index.css?v=4" type="text/css" />
+     <script src="//aeu.alicdn.com/waf/antidomxss_v640.js"></script><script src="//aeu.alicdn.com/waf/interfaceacting211222.js"></script><script type="text/javascript" src="//cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
+    <script type="text/javascript">
+        !window.jQuery && document.write('<script src="/js/jquery-1.10.2.min.js"><\/script>');
+    </script>
+    <link rel="canonical" href="https://www.wjx.cn/login.aspx" /><link rel="alternate" media="only screen and(max-width: 640px)" href="https://www.wjx.cn/mobile/login.aspx" /><meta name="applicable-device" content="pc" />
+    <style>
+
+.wjxui-select{
+    height: 40px;
+    line-height: 1.3;
+    line-height: 40px\9;
+    border-width: 1px;
+    border-style: solid;
+    background-color: #fff;
+    border-radius:4px;
+    border-color: #D9D9D9;
+    padding-left:20px;
+    width:400px;
+    font-size:14px;
+}
+
+    </style>
+    <script src="/layer/layer.js?v=2116" type="text/javascript"></script>
+</head>
+<body id="body1" class="fp-viewing">
+    <form name="form" method="post" action="./login.aspx" id="form">
+<div>
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="/wEPDwULLTIxMTQ1NzY4NzFkGAEFHl9fQ29udHJvbHNSZXF1aXJlUG9zdEJhY2tLZXlfXxYBBQpSZW1lbWJlck1ldLwU4qgz33Rji8zou8eAENNib4k=" />
+</div>
+
+<div>
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="C2EE9ABB" />
+	<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="/wEdAAfxrqR6nVOy3mBYlwdwNQ3ZR1LBKX1P1xh290RQyTesRRHS0B3lkDg8wcTlzQR027xRgZ0GCHKgt6QG86UlMSuIXArz/WCefbk6V2VE3Ih52ScdcjStD50aK/ZrfWs/uQXcqaj6i4HaaYTcyD0yJuxuNMxKZaXzJnI0VXVv9OL2HZrk5tk=" />
+</div>
+        <div class="fullpage-wrapper">
+            <div class="full-head clearfix">
+            <a href="/" id="sojumplogo" class="logo pull-left">
+                <img src="/images/index/wjx-logo@2x.png" alt="问卷星_不止问卷调查/在线考试" width="130">
+            </a>
+            <div class="member pull-right">
+                <a href="/login.aspx" class="btn btn-default btn-lg pull-left login hidden" rel="nofollow">登入</a>
+                <a href="/register/register.aspx?type=1" class="btn btn-default btn-lg pull-left register " rel="nofollow">注册</a>
+                <a href="/" class="btn btn-default btn-lg pull-left back-wjx">返回首页</a>
+            </div>
+        </div>
+            <div class="fullpage-main"></div>
+            <div class="validate-box validate-nstyle" id="divSojump">
+                <fieldset class="validate-wrapper">
+                    <div class="login-validate-tab">
+                         <a href="/login.aspx" id="hlogintxt" class="validate-caption curtab">账号登录</a>
+                         <a href="/smslogin.aspx" id="aloginMode" class="validate-caption">验证码登录</a>
+                    </div>
+      
+                    <ul>
+                        <li>
+
+                            <input name="UserName" id="UserName" name="user-name" placeholder="用户名/Email/手机" class="validate-input user-name" type="text" onfocus="if(value==&#39;用户名/Email/手机&#39;){value=&#39;&#39;;}" onblur="if(value==&#39;&#39;){value=&#39;用户名/Email/手机&#39;}" /><input type="hidden" name="hfUserName" id="hfUserName" />
+                            <div class="divclear"></div>
+                        </li>
+                        <li style="display:none;">
+                            <select id="selUname" class="wjxui-select"></select>
+                            <input type="hidden" name="hfSelUser" id="hfSelUser" />
+                        </li>
+                        <li>
+                            <input name="Password" type="password" id="Password" placeholder="请输入登录密码" class="validate-input" />
+                        </li>
+                        
+                        
+
+                    </ul>
+                    <div id="trRemember" class="remember-box">
+                        <span class="automatic-box pull-left wjxui-form-checkbox wjx__templet__beautifyInput">
+                            
+                            <input name="RememberMe" type="checkbox" id="RememberMe" />
+                            <label for="RememberMe">下次自动登录</label>
+                        </span>
+
+                        <a id="PasswordRecoveryLink" class="get-back pull-right" href="register/forgetpassword.aspx">忘记用户名/密码？</a>
+                    </div>
+                                        <span style="color: red; line-height: 28px;">
+                        </span>
+                </fieldset>
+                <fieldset class="submit-wrapper" style="text-align: center;">
+                    <input type="submit" name="LoginButton" value="登 录" onclick="return checkLogin();" id="LoginButton" class="submitbutton" onmouseover="this.className=&#39;submitbutton submitbutton_hover&#39;;" onmouseout="this.className=&#39;submitbutton&#39;;" style="color:White;" />
+                    <a href="/register/register.aspx?type=1" id="hrefRegister" title="只需２０秒，就可完成注册" class="register-now wjx_alink">立即注册</a>
+                    <div class="third-party-login">
+                        <div class="third-party-txt">
+                            <em class="word">更多登录方式</em>
+                        </div>
+                        <div class="penguin-box">
+                            <span>
+                                <a href="/connectnew.aspx" id="hrefQQ" class="icon penguin-icon"></a>
+                                <p>QQ登录</p>
+
+                            </span>
+                           <span id="spanWeiXin">
+                              <a href="/weixinlogin.aspx" id="hrefWx" class="icon wxpenguin-icon"></a>
+                               <p>微信登录</p>
+                            </span>
+                             <span id="spanQywx" style="margin-right:0;">
+                              <a href="https://qywx.wjx.cn/mobile/qywx/manage.aspx" id="hrefQywx" class="icon qywxpenguin-icon">
+
+                                  <img style="height:0px;"  src="https://open.work.weixin.qq.com/service/img?id=wwb835fa4352ca80df&t=login&c=blue&s=small" srcset="https://open.work.weixin.qq.com/service/img?id=wwb835fa4352ca80df&t=login&c=blue&s=small@2x 2x" referrerpolicy="unsafe-url" alt="企业微信登录">
+
+                              </a>
+                               <p>企业微信</p>
+                            </span>
+
+                          
+
+                            <div style="clear:both;"></div>
+                        </div>
+                    </div>
+                    <script type="text/javascript">
+                        var UserName = document.getElementById("UserName");
+                        var hfUserName = document.getElementById("hfUserName");
+                        var Password = document.getElementById("Password");
+                        var LoginButton = document.getElementById("LoginButton");
+                        var txtCode = document.getElementById("txtCode");
+                        var hrefGetCode = document.getElementById("hrefGetCode");
+                        var hfSelUser = document.getElementById("hfSelUser");
+                        var isYzm = true;
+                        function getCode() {
+                            if (!isYzm)
+                                return;
+                            txtCode.focus();
+                            $(hrefGetCode).html('重新发送 <span id="dtime">60</span>');
+                            $.ajax({
+                                url: "/handler/sendlsms.ashx?t=" + new Date().valueOf(), async: true, success: function (data) {
+                                    isYzm = false;
+                                    var vdata = data.split("|");
+                                    if (vdata[0] == '1') {
+                                        var txt = "验证码已发送，请查收。";
+                                        if (vdata[1]) txt += vdata[1];
+                                        alert(txt);
+                                        
+                                    } else {
+                                        alert(data);
+                                    }
+                                    dtime = setInterval(Ditme, 1000);
+                                }, error: function (xhr) {
+                                    alert(xhr.responseText);
+                                }
+                            });
+                        }
+                        var m = 59;
+                        function Ditme() {
+                            var tm = $('#dtime').text() * 1;
+                            if (tm > 0) {
+                                $('#dtime').text(m);
+                            } else {
+                                clearInterval(dtime);
+                                isYzm = true;
+                                $('#dtime').text('60');
+                                $(hrefGetCode).html('获取短信验证码');
+                                m = 59;
+                            }
+                            m--;
+                        }
+                        var hashObj = new Object();
+                        var hasMulName = false;
+                        var lastQueryMob="";
+                        var queryUByMobile=1;
+                        function getUserName() {
+                            if(!queryUByMobile)return;
+                            var val = $.trim(UserName.value);
+                            if(val==lastQueryMob)
+                                return;
+                            hasMulName = false;
+                            selUname.parentNode.style.display = "none";
+                            selUname.options.length = 0;
+                            lastQueryMob=val;
+                            hfSelUser.value ="";
+                            if (!val) return;
+                            var patrn = /^\d{11}$/;
+                            if (!patrn.exec(val)) return;
+                            var data = hashObj[val];
+                            if (data) {
+                                showUname(data);
+                                return;
+                            }
+                            $.get("/handler/getuname.ashx?mob=" + val, function (data) {
+                                hashObj[val] = data;
+                                showUname(data);
+                            });
+                        }
+                        var selUname = document.getElementById("selUname");
+                        function showUname(data) {
+                            if (!data) return "";
+                            var arr = data.split("§");
+                            if (arr.length > 1) {
+                                var option = new Option("该手机绑定过多个账号，请选择一个登录", "");
+                                option.disabled = true;
+                                option.selected = true;
+                                selUname.options.add(option);
+                            }
+                            for (var i = 0; i < arr.length; i++) {
+                                var u = arr[i];
+                                var muser = u.split("〒");
+                                var tip="ID:";
+                                if(muser[2]=="1")tip="子账号:";
+                                selUname.options.add(new Option(muser[0] + "("+tip + muser[1] + ")", muser[1]));
+                            }
+                            if (arr.length > 1) {
+                                selUname.parentNode.style.display = "";
+                                hasMulName = true;
+                            }
+                            selUname.onchange = function () {
+                                hfSelUser.value = selUname.value;
+                            }
+                        }
+                        function checkLogin() {
+                            if (window.captchaOjb && !isCaptchaValid) {
+                                alert("请先通过滑动验证");
+                                return false;
+                            }
+                            if (Password.value.indexOf("<") > -1 || Password.value.indexOf(">") > -1) {
+                                alert("密码不能包括'<'或'>'号");
+                                return false;
+                            }
+                            if (hasMulName && !selUname.value) {
+                                alert("该手机绑定过多个账号，请选择一个登录");
+                                return false;
+                            }
+                            return true;
+                        }
+                        String.prototype.dbc2sbc = function () {
+                            return this.replace(/[\uff01-\uff5e]/g, function (a) { return String.fromCharCode(a.charCodeAt(0) - 65248); }).replace(/\u3000/g, " ");
+                        }
+                        UserName.onkeypress = Password.onkeypress = function (e) {
+                            e = e || window.event;
+                            if (e && e.keyCode == 13) {
+                                LoginButton.click();
+                            }
+                        }
+                        UserName.onkeydown =function(){
+                            setTimeout(function () {
+                                getUserName();
+                            }, 300);
+                        }
+                        UserName.onblur = UserName.onchange = function () {
+                            var str = this.value;
+                            var newstr = str.dbc2sbc();
+                            if (str != newstr) this.value = newstr;
+                            UserName.value = newstr;
+                            getUserName();
+                        }
+                        if (txtCode) txtCode.onkeydown = UserName.onkeydown;
+                        if (UserName.value) {
+                            Password.focus();
+                            getUserName();
+                        }
+                        else UserName.onblur();
+                        
+                    </script>
+                </fieldset>
+            </div>
+          <div class="feelings-wrapper">
+            <div style="margin-bottom:12px;font-size:20px;">《登顶武功山》</div>
+            <div style="padding-left:10px;font-size:16px;">拍摄于问卷星团队二月徒步之旅</div>
+        </div>
+        </div>
+    </form>
+</body>
+</html>
+
