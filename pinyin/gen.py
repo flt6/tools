@@ -1,0 +1,53 @@
+t='''毕思淼
+毕一聪
+丛金旺
+崔子豪
+樊乐天
+高镆
+黄卓琳
+姜樱楠
+焦祺
+李柏畅
+李南卓阳
+李善伊
+李怡萱
+李语恒
+刘宇航
+刘雨鑫
+刘卓
+娄晴
+洛艺伟
+马卉冉
+潘一鸣
+庞惠铭
+乔旺源
+沈洁
+宋佳怡
+宋雨蔓
+宋智宪
+苏振宇
+王梁宇
+王明仁
+王耀增
+王子来
+吴庆波
+徐子灏
+阎展博
+杨颜聪
+于诗澳
+于世函
+张濠亿
+张日昊
+张姝肜
+张文桦
+张潇艺
+张晓轩
+张妍
+周含笑
+周巧冉'''
+from pypinyin import pinyin
+from pypinyin import Style
+l=t.splitlines()
+for text in l:
+    tem=pinyin(text,style=Style.FIRST_LETTER)
+    print(''.join([i[0] for i in tem]))
