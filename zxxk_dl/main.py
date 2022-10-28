@@ -17,6 +17,9 @@ HTML_FORMAT ='''
 '''
 
 def writefile(filename,text):
+    filename+=".html"
+    print(filename)
+    print("-=-=-=-=\n",text,"\n-=-=-=-=")
     with open(filename+'.html', 'w') as f:
         f.write(text)
 
@@ -37,10 +40,14 @@ def main():
         print("Not rar")
         print("TotalPage=%d" % ret['TotalPage'])
         print("SoftExt=%s" % ret['SoftExt'])
-        html=response["Html"]
+        try:
+            html=ret["Html"]
+            print(ret)
+        except:
+            print(ret)
         # replace "data-original" to "src" for showing in browser
         html=html.replace("data-original", "src")
-        writefile(strftime("%Y%m%d-%H:%M"),html)
+        writefile(strftime("%Y%m%d-%H%M"),html)
     else:
         print("is RAR")
         rar=ret['rarPreviewInfo']
