@@ -1,12 +1,13 @@
 import requests
 from time import strftime
-from re import findall
+from re import findall, sub
+from hashlib import md5
 
 HTML_FORMAT ='''
 <html>
 
 <head>
-<titile>{title}</titile>
+<title>{title}</title>
 </head>
 
 <body>
@@ -17,10 +18,13 @@ HTML_FORMAT ='''
 '''
 
 def writefile(filename,text):
+    filename = sub(r"""[\*\/\\\|\<\>\? \:\.\'\"\!]""", "", filename)
+    unique = md5(text.encode())
+    filename += "_"+unique.hexdigest()[:5]
     filename+=".html"
-    print(filename)
-    print("-=-=-=-=\n",text,"\n-=-=-=-=")
-    with open(filename+'.html', 'w') as f:
+    print("Writing "+filename)
+    # print("-=-=-=-=\n",text,"\n-=-=-=-=")
+    with open(filename+'.html', 'w', encoding="utf-8") as f:
         f.write(text)
 
 
@@ -45,9 +49,10 @@ def main():
             print(ret)
         except:
             print(ret)
+            exit(1)
         # replace "data-original" to "src" for showing in browser
         html=html.replace("data-original", "src")
-        writefile(strftime("%Y%m%d-%H%M"),html)
+        writefile(f"{softID}",html)
     else:
         print("is RAR")
         rar=ret['rarPreviewInfo']
@@ -56,9 +61,12 @@ def main():
             title=file["SoftName"]
             # replace "data-original" to "src" for showing in browser
             # html=html.replace("data-original", "src")
-            urls=findall("(?<=data-original=\")https://preview.xkw.com/.+(?=\")",html)
+            urls=findall("(?<=data-original=\")https://preview.xkw.com/\\S+(?=\")",html)
             l=[]
             for url in urls:
+                if "jpg" in url:
+                    l.append(f"<img src={url} />")
+                    continue
                 page=requests.get(url,cookies=response.cookies)
                 if not page.status_code==200:
                     print(page)
@@ -70,4 +78,5 @@ def main():
             writefile(title,format_html)
 
 if __name__  == "__main__":
-    main()
+    while True:
+        main()
