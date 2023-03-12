@@ -1,5 +1,4 @@
 import requests
-from time import strftime
 from re import findall, sub
 from hashlib import md5
 
