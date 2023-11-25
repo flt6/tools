@@ -70,6 +70,6 @@ def getlist(id):
     return find.group().split(",")
 
 if __name__ == "__main__":
-    login("flt","***REMOVED***")
+    login("flt","**************")
     print(s.cookies)
     print(getlist("184412487"))
