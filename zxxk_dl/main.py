@@ -30,7 +30,7 @@ def writefile(filename,text):
 def main():
     softID=input("ID: ")
     url = "https://www.zxxk.com/soft/Preview/FirstLoadPreviewJson?softID={}&type=3&product=1&v=2&FullPreview=true"
-    response = requests.get(url.format(softID))
+    response = requests.get(url.format(softID),verify=False)
     if response.status_code!=200:
         print("ERROR")
         print(response.status_code)
@@ -66,7 +66,7 @@ def main():
                 if "jpg" in url:
                     l.append(f"<img src={url} />")
                     continue
-                page=requests.get(url,cookies=response.cookies)
+                page=requests.get(url,cookies=response.cookies,verify=False)
                 if not page.status_code==200:
                     print(page)
                     print(page.status_code)

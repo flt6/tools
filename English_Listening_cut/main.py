@@ -7,10 +7,9 @@ from traceback import print_exc
 
 def init():
     if len(argv) != 2:
-        print("Usage: a.py file.mp3")
+        print(f"Usage: {__file__} file.mp3")
         exit(1)
     return argv[1]
-    # return "新课程外研高一第32期.mp3"
 
 def make_dir(pth:str):
     if not path.isdir(pth):
