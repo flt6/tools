@@ -19,6 +19,8 @@ Usage：`main.bat`
 
 源文件丢了，TODO
 
+2024.7.14：放弃，已有项目[双轨快传](https://github.com/weixiansen574/HybridFileXfer)实现
+
 ## [并行auto-editor](mult)
 
 并行运行auto-editor, 递归转码所有视频。（PS：网课时用的）
@@ -76,3 +78,17 @@ python, requests,bs4
 
 python, opencv
 
+## 检测视频是否破损（video_test）
+
+
+
+## 转移libcef.dll（move_CEF）
+
+通过Everything API遍历所有libcef.dll，核验md5后转移至指定文件夹并创建软连接。
+
+## [图片整理(tidy_img)](tidy_img)
+
+按照手机（华为）照片视频命名规范（例如`IMG_20170218_164951.jpg`，`VID_20220116_154728.mp4`）将其按年份分类，递归遍历所有文件。如果重复，文件相同<sup>[1]</sup>由用户判断是否删除相同文件。如果文件冲突<sup>[2]</sup>，放入conflict文件夹，并在文件名后加sha256前5位。
+
+[1]: 先判断文件大小，相同比较sha256值，如果均相同认为是同文件
+[2]: 上述标准任一不满足
