@@ -1,0 +1,4 @@
+files_to_encrypt
+*.build
+*.dist
+*.onefile-build
