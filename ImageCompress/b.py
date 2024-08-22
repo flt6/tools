@@ -2,37 +2,46 @@ from subprocess import Popen,PIPE
 from pathlib import Path
 from multiprocessing import Pool
 from sys import argv
+from os import environ
 
-SINGLE=False
-
-def main(file:Path,TARGET_SIZE,MINSIZE,compressdir):
+def main(file:Path,targetPath:Path,TARGET_SIZE,MINSIZE,SINGLE):
     if SINGLE:print(f"Process {str(file)}",end="",flush=True)
     else:cnt=0
-    if (compressdir/file.name).exists():
+    if targetPath.exists():
         if SINGLE:
             print(f" file already exists. Check it.")
             exit()
         else:
-            print(f"{compressdir/file.name} file already exists. Check it.")
+            print(f"{targetPath} file already exists. Check it.")
             return None
-    with open(file,"rb") as f:
-        inp=f.read()
+    inp=file.read_bytes()
     proc=Popen(f"ffmpeg.exe -hide_banner -i - -vf \"scale=-1:1600:bilinear\" -f mjpeg -",stderr=PIPE,stdout=PIPE,stdin=PIPE)
     out,_=proc.communicate(inp)
+    suffix=file.suffix[1:]
+    mapper={
+        "jpg":"mjpeg",
+        "jpeg":"mjpeg",
+        "png":"image2pipe",
+        "webp":"webp",
+        "gif":"gif"
+    }
+    targetFmt=mapper.get(suffix,"mjpeg")
+
     if SINGLE:print(".",end="",flush=True)
     else:cnt+=1
     size=1600
-    delta=abs(len(out)-TARGET_SIZE)//200
+    delta=abs(len(out)-TARGET_SIZE)//100
     while True:
         lastDelta=delta
-        delta=abs(len(out)-TARGET_SIZE)//200
+        delta=abs(len(out)-TARGET_SIZE)//100
         if delta>lastDelta:
             delta=lastDelta*3//4
+        # print(delta,len(out)//1024,size)
         if delta<10:
             while len(out)>TARGET_SIZE:
                 size-=10
-                proc=Popen(f"ffmpeg.exe -hide_banner -i - -vf \"scale=-1:{str(size)}:bilinear\" -f mjpeg -",stderr=PIPE,stdout=PIPE,stdin=PIPE)
-                out,_=proc.communicate(inp)
+                proc=Popen(f"ffmpeg.exe -hide_banner -i - -vf \"scale=-1:{str(size)}:bilinear\" -f {targetFmt} -",stderr=PIPE,stdout=PIPE,stdin=PIPE)
+                out,err=proc.communicate(inp)
                 if SINGLE:print(".",end="",flush=True)
                 else:cnt+=1
             break
@@ -44,29 +53,56 @@ def main(file:Path,TARGET_SIZE,MINSIZE,compressdir):
             size+=delta
         else:
             break
-        proc=Popen(f"ffmpeg.exe -hide_banner -i - -vf \"scale=-1:{str(size)}:bilinear\" -f mjpeg -",stderr=PIPE,stdout=PIPE,stdin=PIPE)
-        out,_=proc.communicate(inp)
+        proc=Popen(f"ffmpeg.exe -hide_banner -i - -vf \"scale=-1:{str(size)}:bilinear\" -f {targetFmt} -",stderr=PIPE,stdout=PIPE,stdin=PIPE)
+        out,err=proc.communicate(inp)
         if SINGLE:print(".",end="",flush=True)
         else:cnt+=1
-    with open(compressdir/file.name,"wb") as f:
-        f.write(out)
+    if targetFmt=="webp":
+        proc=Popen(f"ffmpeg -hide_banner -i - {str(targetPath.resolve())}",stdin=PIPE,stderr=PIPE)
+        proc.communicate(out)
+    else:
+        targetPath.write_bytes(out)
     if SINGLE:print(" Success")
     else:return file,cnt
 
 if __name__ == "__main__":
+    SINGLE=False
+    # argv.append("test/types")
     if len(argv)!=2:
-        print(f"Usage: {__file__} dir")
+        print(f"Usage: {__file__} dir/file")
         exit()
+
+    TARGET_SIZE=input("Target size(k): ")
+    MINSIZE=input("The minimum size allowed(k): ")
+    
+    config=Path(environ.get("APPDATA")+"/compressImage/config.txt")
+    if TARGET_SIZE=="":
+        if config.exists():
+            TARGET_SIZE=config.read_text()
+            print("Using last target size:",TARGET_SIZE)
+        else:
+            while TARGET_SIZE!="":
+                print("Target size is empty and the application not been used.")
+                TARGET_SIZE=input("Target size(k): ")
+    config.parent.mkdir(exist_ok=True)
+    config.touch(exist_ok=True)
+    config.write_text(TARGET_SIZE)
+    TARGET_SIZE=int(TARGET_SIZE)*1024
+    
+    if MINSIZE=="":
+        MINSIZE=int(TARGET_SIZE*0.8)
+        print("Using 80% of the target size:",MINSIZE)
+    else:MINSIZE=int(MINSIZE)*1024
+    
     d=Path(argv[1]).resolve()
+    if d.is_file():
+        main(d,d.with_stem(d.stem+"_compress"),TARGET_SIZE,MINSIZE,True)
+        exit()
     files=d.glob("*")
     compressdir=(d/"compress")
     compressdir.mkdir(exist_ok=True)
 
-    TARGET_SIZE=int(input("Target size(k): "))*1024
-    MINSIZE=int(input("The minimum size allowed(k): "))*1024
     
-    # print("Target size:",TARGET_SIZE//1024,"k")
-    # print("The minimum size allowed:",MINSIZE//1024,"k")
     def callback(x):
         if x is None:
             print("Some file exists, please check.")
@@ -76,12 +112,12 @@ if __name__ == "__main__":
     
     if SINGLE:
         for file in files:
-            if file.suffix in [".jpg",".png"]:
-                main(file,TARGET_SIZE,MINSIZE,compressdir)
+            if file.suffix in [".jpg",".png",".webp",".jpeg",".gif",".tif",".tiff",".bmp"]:
+                main(file,compressdir/file.name,TARGET_SIZE,MINSIZE,True)
     else:
         with Pool(16) as p:
             for file in files:
-                if file.suffix in [".jpg",".png"]:
-                    p.apply_async(main,(file,TARGET_SIZE,MINSIZE,compressdir),callback=callback)
+                if file.suffix in [".jpg",".png",".webp",".jpeg",".gif",".tif",".tiff",".bmp"]:
+                    p.apply_async(main,(file,compressdir/file.name,TARGET_SIZE,MINSIZE,False),callback=callback)
             p.close()
             p.join()
