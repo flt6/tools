@@ -3,6 +3,7 @@ from pathlib import Path
 from multiprocessing import Pool
 from sys import argv
 from os import environ
+from matplotlib import pyplot as plt
 
 def main(file:Path,targetPath:Path,TARGET_SIZE,MINSIZE,SINGLE):
     if SINGLE:print(f"Process {str(file)}",end="",flush=True)
@@ -31,7 +32,9 @@ def main(file:Path,targetPath:Path,TARGET_SIZE,MINSIZE,SINGLE):
     else:cnt+=1
     size=1600
     delta=abs(len(out)-TARGET_SIZE)//100
+    arr=[]
     while True:
+        arr.append(len(out)//1024)
         lastDelta=delta
         delta=abs(len(out)-TARGET_SIZE)//100
         if delta>lastDelta:
@@ -65,6 +68,10 @@ def main(file:Path,targetPath:Path,TARGET_SIZE,MINSIZE,SINGLE):
     if suffix not in mapper.keys():
         targetPath=targetPath.with_suffix(".jpg")
     targetPath.write_bytes(out)
+
+    plt.scatter(range(len(arr)), arr, label='arr values')
+    plt.axhline(y=TARGET_SIZE//1024, color='r', linestyle='--', label=f'y={TARGET_SIZE}')
+    plt.show()
     if SINGLE:print(" Success")
     else:return file,cnt
 
