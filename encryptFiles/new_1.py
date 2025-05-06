@@ -125,6 +125,8 @@ def decrypt_files():
     with open(PASSWORD_FILE, "r") as f:
         password_data = json.load(f)
 
+    suc=True
+
     for encrypted_key_hex, encrypted_files in password_data.items():
         encrypted_aes_key = bytes.fromhex(encrypted_key_hex)
         aes_key = rsa_cipher.decrypt(encrypted_aes_key)
@@ -136,6 +138,7 @@ def decrypt_files():
                     iv, ciphertext = f.read(16), f.read()
             except OSError as e:
                 print(f"Cannot read file {file_path}: {e}")
+                suc=False
                 continue
             except Exception as e:
                 from traceback import print_exc
@@ -152,9 +155,11 @@ def decrypt_files():
                 f.write(plaintext)
 
             os.remove(file_path)
-
-    os.remove(PASSWORD_FILE)
-    print("Files decrypted.")
+    if suc:
+        os.remove(PASSWORD_FILE)
+        print("Files decrypted.")
+    else:
+        print("Some files failed to decrypt.")
 
 def main():
     if not ENCRYPT_DIR.exists():
