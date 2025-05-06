@@ -18,23 +18,17 @@ class Msg:
         if msg is None:
             self.time=0
             return
-        print(msg)
-        self.id=msg["id"]
-        if msg["metadata"]["is_visually_hidden_from_conversation"]:
-            self.par=0
-            self.time=msg["create_time"]
-            return
-        self.par=msg["metadata"]["parent_id"]
-        self.role=msg["author"]["role"]
-        # self.thinking_time=sub(r"\\[\(\)]","$",msg["thinking_elapsed_secs"])
-        # self.thinking_content=sub(r"\\[\[\]]","$$",msg["thinking_content"])
-        self.content=msg["content"]["parts"][0]
-        self.time=msg["create_time"]
+        self.id=msg["message_id"]
+        self.par=msg["parent_id"]
+        self.role=msg["role"]
+        self.thinking_time=sub(r"\\[\(\)]","$",msg["thinking_elapsed_secs"])
+        self.thinking_content=sub(r"\\[\[\]]","$$",msg["thinking_content"])
+        self.content=msg["content"]
+        self.time=msg["inserted_at"]
         
         if self.par==None:self.par=0
 
-inp = data["messages"]
-# inp = data["data"]["biz_data"]["chat_messages"]
+inp = data["data"]["biz_data"]["chat_messages"]
 msgs:list[Msg]=[Msg(None)]
 
 child:list[list[Msg]]=[[] for _ in range(len(inp)+1)]
@@ -63,8 +57,7 @@ if not dfs(0):
     raise RuntimeError("Cannot find latest node in tree.")
 
 path.pop(0)
-title = "Conversation"
-# title = data['data']['biz_data']['chat_session']['title']
+title = data['data']['biz_data']['chat_session']['title']
 out=[f"# {title}"]
 for i in path:
     resp=[]
