@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务意向与人数配置</title>
+    <style>
+        table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            text-align: center;
+            padding: 10px;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .red {
+            background-color: #ffcccc;
+        }
+        .green {
+            background-color: #ccffcc;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">任务意向与人数配置</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>任务</th>
+                <th>最大人数</th>
+                <th>当前人数</th>
+                <th>意向人列表</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in task_status %}
+            <tr class="{{ task.status_color }}">
+                <td>{{ task.task }}</td>
+                <td>{{ task.max_count }}</td>
+                <td>{{ task.current_count }}</td>
+                <td>
+                    {% for user in task.users %}
+                        {{ user }}{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .modal-dialog {
+            max-width: 600px;
+            margin: auto;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        .modal-content {
+            border-radius: 15px;
+            padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        .modal-header {
+            background-color: #dc3545;
+            color: white;
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
+            text-align: center;
+        }
+        .modal-title {
+            margin: 0 auto;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .modal-body {
+            padding: 20px 30px;
+            font-size: 1.25rem;
+            color: #495057;
+            text-align: center;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h5 class="modal-title w-100">{{ title }}</h5>
+            </div>
+            <!-- Modal Body -->
+            <div class="modal-body">
+                {{ content }}
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

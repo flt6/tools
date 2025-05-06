@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配置任务</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-top: 20px;
+        }
+        form {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        #tasks div {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        label {
+            font-weight: bold;
+            flex: 1;
+        }
+        input[type="text"], input[type="number"] {
+            flex: 2;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 10px 5px 0;
+            font-size: 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #fff;
+        }
+        button[type="button"] {
+            background-color: #28a745;
+        }
+        button.delete {
+            background-color: #dc3545;
+        }
+        button.clear {
+            background-color: #ffc107;
+        }
+        button[type="submit"] {
+            background-color: #007bff;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <h1>配置任务</h1>
+    <form method="POST">
+        <div id="tasks">
+            <div>
+                <label>任务：</label>
+                <input type="text" name="task" required>
+                <label>人数：</label>
+                <input type="number" name="count" min="1" required>
+                <button type="button" class="delete" onclick="deleteTask(this)">删除</button>
+            </div>
+        </div>
+        <div style="text-align: center;">
+            <button type="button" onclick="addTask()">添加任务</button>
+            <button type="button" class="clear" onclick="clearTasks()">清空任务</button>
+            <button type="submit">提交</button>
+        </div>
+    </form>
+
+    <script>
+        // 添加新任务行
+        function addTask() {
+            const tasksDiv = document.getElementById("tasks");
+            const newTaskDiv = document.createElement("div");
+            newTaskDiv.innerHTML = `
+                <label>任务：</label>
+                <input type="text" name="task" required>
+                <label>人数：</label>
+                <input type="number" name="count" min="1" required>
+                <button type="button" class="delete" onclick="deleteTask(this)">删除</button>
+            `;
+            tasksDiv.appendChild(newTaskDiv);
+        }
+
+        // 删除单行任务
+        function deleteTask(button) {
+            const taskDiv = button.parentElement;
+            taskDiv.remove();
+        }
+
+        // 清空所有任务
+        function clearTasks() {
+            const tasksDiv = document.getElementById("tasks");
+            tasksDiv.innerHTML = `
+                <div>
+                    <label>任务：</label>
+                    <input type="text" name="task" required>
+                    <label>人数：</label>
+                    <input type="number" name="count" min="1" required>
+                    <button type="button" class="delete" onclick="deleteTask(this)">删除</button>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

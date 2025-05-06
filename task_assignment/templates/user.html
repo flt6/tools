@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户意向</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">提交任务意向</h1>
+        <form method="POST" class="card shadow p-4">
+            <div class="mb-3">
+                <label for="name" class="form-label">姓名</label>
+                <input type="text" name="name" id="name" class="form-control" placeholder="请输入您的姓名" required>
+            </div>
+            <div class="mb-3">
+                <label for="intention" class="form-label">任务意向</label>
+                <select name="intention" id="intention" class="form-select" required onchange="updateTaskInfo()">
+                    {% for task, count in tasks.items() %}
+                        <option value="{{ task }}" data-max="{{ count }}">{{ task }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <p id="task-info" class="text-muted">任务人数：{{ init }}</p>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">提交</button>
+        </form>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script>
+        // 动态更新任务信息
+        function updateTaskInfo() {
+            const taskSelect = document.getElementById("intention");
+            const selectedOption = taskSelect.options[taskSelect.selectedIndex];
+            const maxCount = selectedOption.getAttribute("data-max");
+            const taskInfo = document.getElementById("task-info");
+
+            if (maxCount) {
+                taskInfo.textContent = `任务人数：${maxCount}`;
+            } else {
+                taskInfo.textContent = "请选择一个任务以查看最多人数。";
+            }
+        }
+    </script>
+</body>
+</html>
