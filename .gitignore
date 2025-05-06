@@ -1,5 +1,8 @@
 __pycache__
 *.exe
+*.dll
+*.dist
+*.build
 *.mp3
 *.mp4
 *.log

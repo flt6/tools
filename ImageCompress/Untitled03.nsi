@@ -51,7 +51,7 @@ BrandingText " "
 Section "主文件" SEC01
   SetOutPath "$INSTDIR"
   SetOverwrite ifnewer
-  File "E:\tem\0821\b.dist\*.*"
+  File "C:\git\tools\ImageCompress\b.dist\*.*"
   WriteRegStr HKCR "Directory\Background\shell\ImageCompress" "" "压缩当前文件夹图片"
   WriteRegStr HKCR "Directory\Background\shell\ImageCompress\command" ""  '"$INSTDIR\b.exe" "%V"'
 SectionEnd

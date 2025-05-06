@@ -51,7 +51,7 @@ BrandingText " "
 Section "主文件" SEC01
   SetOutPath "$INSTDIR"
   SetOverwrite ifnewer
-  File "E:\tem\0821\b.dist\*.*"
+  File "C:\git\tools\ImageCompress\b.dist\*.*"
   WriteRegStr HKCR "Directory\Background\shell\ImageCompress" "" "压缩当前文件夹图片"
   WriteRegStr HKCR "Directory\Background\shell\ImageCompress\command" ""  '"$INSTDIR\b.exe" "%V"'
   WriteRegStr HKCR "*\shell\ImageCompress" "" "压缩当前图片"
@@ -60,10 +60,10 @@ SectionEnd
 
 
 Section "ffmpeg" SEC02
-  File "E:\tem\0821\compress\ffmpeg-essentials.7z"
-  File "E:\tem\0821\compress\7z.exe"
-  File "E:\tem\0821\compress\7z.dll"
-  ExecWait '"$INSTDIR\7z.exe" e -aoa ffmpeg-essentials.7z ffmpeg-2024-08-18-git-7e5410eadb-essentials_build/bin/ffmpeg.exe'
+  File "C:\git\tools\ImageCompress\ffmpeg.7z"
+  File "C:\git\tools\ImageCompress\7z.exe"
+  File "C:\git\tools\ImageCompress\7z.dll"
+  ExecWait '"$INSTDIR\7z.exe" e -aoa ffmpeg.7z ffmpeg-2024-09-09-git-9556379943-essentials_build/bin/ffmpeg.exe'
 SectionEnd
 
 Section "关联图片格式" SEC03
@@ -93,7 +93,7 @@ Section -Post
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"
   Delete "$INSTDIR\7z.exe"
   Delete "$INSTDIR\7z.dll"
-  Delete "$INSTDIR\ffmpeg-essentials.7z"
+  Delete "$INSTDIR\ffmpeg.7z"
 SectionEnd
 
 #-- 根据 NSIS 脚本编辑规则，所有 Function 区段必须放置在 Section 区段之后编写，以避免安装程序出现未可预知的问题。--#
