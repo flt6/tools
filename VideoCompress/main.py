@@ -1,6 +1,7 @@
 import subprocess
 from pathlib import Path
 import sys
+import os
 import logging
 from datetime import datetime
 from time import time
@@ -15,6 +16,7 @@ ESTI_FILE = Path("esti.out")
 CFG_FILE = Path("config.json")
 CFG = {
     "crf":"18",
+    "bitrate": None,
     "codec": "h264",
     "extra": [],
     "ffmpeg": "ffmpeg",
@@ -34,18 +36,31 @@ def get_cmd(video_path,output_file):
         ]
         command.extend(CFG["manual"])
         command.append(output_file)
+        return command
     
-    command = [
-        CFG["ffmpeg"],  
-        "-hide_banner",  # 隐藏 ffmpeg 的横幅信息
-        "-i", video_path,
-        "-vf", "scale=-1:1080",  # 设置视频高度为 1080，宽度按比例自动计算
-        "-c:v", CFG["codec"],  # 使用 Intel Quick Sync Video 编码
-        "-global_quality", CFG["crf"],  # 设置全局质量（数值越低质量越高）
-        "-r","30",
-        "-preset", "slow",  # 设置压缩速度为慢（压缩效果较好）
-        "-y",
-    ]
+    if CFG["bitrate"] is not None:
+        command = [
+            CFG["ffmpeg"],  
+            "-hide_banner",
+            "-i", video_path,
+            "-vf", "scale=-1:1080",  
+            "-c:v", CFG["codec"],
+            "-b:v", CFG["bitrate"],
+            "-r","30",
+            "-y",
+        ]
+    else:
+        command = [
+            CFG["ffmpeg"],  
+            "-hide_banner",
+            "-i", video_path,
+            "-vf", "scale=-1:1080",
+            "-c:v", CFG["codec"],
+            "-global_quality", str(CFG["crf"]),
+            "-r","30",
+            "-y",
+        ]
+    
     command.extend(CFG["extra"])
     command.append(output_file)
     return command
@@ -70,11 +85,11 @@ def setup_logging():
     log_dir.mkdir(exist_ok=True)
     log_file = log_dir / f"video_compress_{datetime.now().strftime('%Y%m%d')}.log"
     stream = RichHandler(rich_tracebacks=True,tracebacks_show_locals=True)
-    stream.setLevel(logging.DEBUG)
+    stream.setLevel(logging.INFO)
     stream.setFormatter(logging.Formatter("%(message)s"))
     
     file = logging.FileHandler(log_file, encoding='utf-8')
-    file.setLevel(logging.INFO)
+    file.setLevel(logging.DEBUG)
     
     logging.basicConfig(
         level=logging.DEBUG,
@@ -158,7 +173,8 @@ def save_esti():
             # 保存为逗号分隔的文本格式
             ESTI_FILE.write_text(','.join(map(str, coeffs)))
     except Exception as e:
-        logging.warning("保存估算数据失败", exc_info=e)
+        logging.warning("保存估算数据失败")
+        logging.debug("error at save_esti",exc_info=e)
 
 def fmt_time(t:int) -> str:
     if t>3600:
@@ -193,7 +209,8 @@ def func(sz:int,src=False):
         return fmt_time(t)
     except KeyboardInterrupt as e:raise e
     except Exception as e:
-        logging.warning("无法计算预计时间",exc_info=e)
+        logging.warning("无法计算预计时间")
+        logging.debug("esti time exception", exc_info=e)
         return -1 if src else "NaN"
     
 def process_video(video_path: Path):
@@ -202,9 +219,9 @@ def process_video(video_path: Path):
     sz=video_path.stat().st_size//(1024*1024)
     if esti is not None or TRAIN:
         use = func(sz,True)
-        logging.debug(f"开始处理文件: {video_path.relative_to(root)}，大小{sz}M，预计{fmt_time(use)}")
+        logging.info(f"开始处理文件: {video_path.relative_to(root)}，大小{sz}M，预计{fmt_time(use)}")
     else:
-        logging.debug(f"开始处理文件: {video_path.relative_to(root)}，大小{sz}M")
+        logging.info(f"开始处理文件: {video_path.relative_to(root)}，大小{sz}M")
         
     
     bgn=time()
@@ -218,26 +235,9 @@ def process_video(video_path: Path):
         logging.warning(f"文件{output_file}存在，跳过")
         return use
     
-    # 4x
-    # command = [
-    #     "ffmpeg.exe",  # 可以修改为 ffmpeg 的完整路径，例如：C:/ffmpeg/bin/ffmpeg.exe
-    #     "-hide_banner",  # 隐藏 ffmpeg 的横幅信息
-    #     "-i", str(video_path.absolute()),
-    #     "-filter:v", "setpts=0.25*PTS",  # 设置视频高度为 1080，宽度按比例自动计算
-    #     "-filter:a", "atempo=4.0",
-    #     "-c:v", "h264_qsv",  # 使用 Intel Quick Sync Video 编码
-    #     "-global_quality", "28",  # 设置全局质量（数值越低质量越高）
-    #     "-r","30",
-    #     "-preset", "fast",  # 设置压缩速度为慢（压缩效果较好）
-    #     "-y",
-    #     str(output_file.absolute())
-    # ]
-    
-    # 1x
     command = get_cmd(str(video_path.absolute()),output_file)
     
     try:
-        # 调用 ffmpeg，并捕获标准输出和错误信息
         result = subprocess.run(
             command, 
             stdout=subprocess.PIPE, 
@@ -246,16 +246,13 @@ def process_video(video_path: Path):
             text=True
         )
         
-        # 检查 ffmpeg 的错误输出
         if result.stderr:
-            # 记录所有警告和错误信息
             for line in result.stderr.splitlines():
                 if 'warning' in line.lower():
                     logging.warning(f"[FFmpeg]({video_path}): {line}")
                 elif 'error' in line.lower():
                     logging.error(f"[FFmpeg]({video_path}): {line}")
         
-        # 检查 ffmpeg 执行的返回码
         if result.returncode != 0:
             logging.error(f"处理文件 {video_path} 失败，返回码: {result.returncode}，cmd={' '.join(command)}")
             logging.error(result.stdout)
@@ -297,21 +294,69 @@ def traverse_directory(root_dir: Path):
     
     with Progress() as prog:
         task = prog.add_task("压缩视频",total=sm)
-        # prog.print("进度条右侧时间为不精确估算（当所有文件处理时间相同时估算精确）")
-        # 使用 rglob 递归遍历所有文件
         for file in root_dir.rglob("*"):
             if file.parent.name == "compress":continue
             if file.is_file() and file.suffix.lower() in video_extensions:
                 t = process_video(file)
-                # if esti is not None:
-                #     sm-=t
-                #     prog.update(task,advance=1,description=f"预计剩余{fmt_time(sm)}")
                 if t is None:
                     prog.advance(task)
                 else:
                     prog.advance(task,t)
 
-if __name__ == "__main__":
+def test():
+    try:
+        subprocess.run([CFG["ffmpeg"],"-version"],stdout=-3,stderr=-3).check_returncode()
+    except Exception as e:
+        logging.critical("无法运行ffmpeg")
+        exit(-1)
+    try:
+        ret = subprocess.run(
+            "ffmpeg -hide_banner -f lavfi -i testsrc=duration=1:size=1920x1080:rate=30 -c:v libx264 -y -pix_fmt yuv420p compress_video_test.mp4",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        if ret.returncode != 0:
+            logging.warning("无法生成测试视频.")
+            logging.debug(ret.stdout)
+            logging.debug(ret.stderr)
+            ret.check_returncode()
+        cmd = get_cmd("compress_video_test.mp4","compressed_video_test.mp4",)
+        ret = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        if ret.returncode != 0:
+            logging.error("测试视频压缩失败")
+            logging.debug(ret.stdout)
+            logging.debug(ret.stderr)
+            logging.error("Error termination via test failed.")
+            exit(-1)
+        os.remove("compress_video_test.mp4")
+        os.remove("compressed_video_test.mp4")
+    except Exception as e:
+        if os.path.exists("compress_video_test.mp4"):
+            os.remove("compress_video_test.mp4")
+        logging.warning("测试未通过，继续运行可能出现未定义行为。")
+        logging.debug("Test error",exc_info=e)
+
+def init_train():
+    global esti
+    if CFG["train"]:
+        train_init()
+    else:
+        if ESTI_FILE.exists():
+            try:
+                # 从文件读取系数
+                coeffs_str = ESTI_FILE.read_text().strip().split(',')
+                esti = [float(coeff) for coeff in coeffs_str]
+            except Exception as e:
+                logging.warning(f"预测输出文件{str(ESTI_FILE)}存在但无法读取", exc_info=e)
+
+def main(_root = None):
+    global root, esti
     setup_logging()
     tot_bgn = time()
     logging.info("-------------------------------")
@@ -326,23 +371,20 @@ if __name__ == "__main__":
             logging.warning("Invalid config file, ignored.")
             logging.debug(e)
     
-    # 通过命令行参数传入需要遍历的目录
-    if len(sys.argv) < 2:
-        print(f"用法：python {__file__} <目标目录>")
-        logging.warning("Error termination via invalid input.")
-        sys.exit(1)
-    
-    root = Path(sys.argv[1])
-    if CFG["train"]:
-        train_init()
+    if _root is not None:
+        root = Path(_root)
     else:
-        if ESTI_FILE.exists():
-            try:
-                # 从文件读取系数
-                coeffs_str = ESTI_FILE.read_text().strip().split(',')
-                esti = [float(coeff) for coeff in coeffs_str]
-            except Exception as e:
-                logging.warning(f"预测输出文件{str(ESTI_FILE)}存在但无法读取", exc_info=e)
+        # 通过命令行参数传入需要遍历的目录
+        if len(sys.argv) < 2:
+            print(f"用法：python {__file__} <目标目录>")
+            logging.warning("Error termination via invalid input.")
+            sys.exit(1)
+        root = Path(sys.argv[1])
+        
+    logging.info("开始验证环境")
+    test()
+    
+    init_train()
     
     if not root.is_dir():
         print("提供的路径不是一个有效目录。")
@@ -359,4 +401,5 @@ if __name__ == "__main__":
     except Exception as e:
         logging.error("Error termination via unhandled error, CHECK IF LAST PROCSSING VIDEO IS COMPLETED.",exc_info=e)
 
-
+if __name__ == "__main__":
+    main()
