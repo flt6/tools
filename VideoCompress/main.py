@@ -9,6 +9,7 @@ from rich.logging import RichHandler
 from rich.progress import Progress
 from pickle import dumps, loads
 import atexit
+import re
 
 root = None
 TRAIN = False
@@ -213,7 +214,7 @@ def func(sz:int,src=False):
         logging.debug("esti time exception", exc_info=e)
         return -1 if src else "NaN"
     
-def process_video(video_path: Path):
+def process_video(video_path: Path, update_func=None):
     global esti_data
     use=None
     sz=video_path.stat().st_size//(1024*1024)
@@ -238,7 +239,7 @@ def process_video(video_path: Path):
     command = get_cmd(str(video_path.absolute()),output_file)
     
     try:
-        result = subprocess.run(
+        result = subprocess.Popen(
             command, 
             stdout=subprocess.PIPE, 
             stderr=subprocess.PIPE,
@@ -246,13 +247,23 @@ def process_video(video_path: Path):
             text=True
         )
         
-        if result.stderr:
-            for line in result.stderr.splitlines():
-                if 'warning' in line.lower():
-                    logging.warning(f"[FFmpeg]({video_path}): {line}")
-                elif 'error' in line.lower():
-                    logging.error(f"[FFmpeg]({video_path}): {line}")
-        
+        while result.poll() is None:
+            line = " "
+            while result.poll() is None and line[-1:] not in "\r\n":
+                line+=result.stderr.read(1)
+                # print(line[-1])
+            if 'warning' in line.lower():
+                logging.warning(f"[FFmpeg]({video_path}): {line}")
+            elif 'error' in line.lower():
+                logging.error(f"[FFmpeg]({video_path}): {line}")
+            elif "frame=" in line:
+                # print(line,end="")
+                match = re.search(r"frame=\s*(\d+)",line)
+                if match:
+                    frame_number = int(match.group(1))
+                    if update_func is not None:
+                        update_func(frame_number)
+
         if result.returncode != 0:
             logging.error(f"处理文件 {video_path} 失败，返回码: {result.returncode}，cmd={' '.join(command)}")
             logging.error(result.stdout)
@@ -267,7 +278,7 @@ def process_video(video_path: Path):
                 
             
     except Exception as e:
-        logging.error(f"执行 ffmpeg 命令时发生异常, 文件：{video_path}，cmd={' '.join(command)}",exc_info=e)
+        logging.error(f"执行 ffmpeg 命令时发生异常, 文件：{str(video_path)}，cmd={' '.join(command)}",exc_info=e)
     return use
 
 def traverse_directory(root_dir: Path):
@@ -287,19 +298,52 @@ def traverse_directory(root_dir: Path):
                     logging.error("无法预估时间，因为预估函数返回了异常")
                 sm += tmp
         logging.info(f"预估用时：{fmt_time(sm)}")
+    else:
+        # logging.info("正在估算视频帧数，用于显示进度。")
+        with Progress() as prog:
+            task = prog.add_task("正在获取视频信息",total=len(list(root_dir.rglob("*"))))
+            frames = {}
+            for file in root_dir.rglob("*"):
+                prog.advance(task)
+                if file.parent.name == "compress":continue
+                if file.is_file() and file.suffix.lower() in video_extensions:
+                    cmd = f'ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate,duration -of default=nokey=1:noprint_wrappers=1 "{str(file)}'
+                    proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+                    if proc.returncode != 0:
+                        logging.error(f"无法获取视频信息: {file}, 返回码: {proc.returncode}")
+                        frames[file] = 60
+                        continue
+                    if proc.stdout.strip():
+                        avg_frame_rate, duration = proc.stdout.strip().split('\n')
+                        tmp = avg_frame_rate.split('/')
+                        avg_frame_rate = float(tmp[0]) / float(tmp[1])
+                        duration = float(duration)
+                        frames[file] = duration * avg_frame_rate
         
         
     logging.debug(f"开始遍历目录: {root_dir}")
     # 定义需要处理的视频后缀（忽略大小写）
     
     with Progress() as prog:
-        task = prog.add_task("压缩视频",total=sm)
+        task = prog.add_task("总进度",total=sm if sm is not None else sum(frames.values()))
         for file in root_dir.rglob("*"):
             if file.parent.name == "compress":continue
             if file.is_file() and file.suffix.lower() in video_extensions:
-                t = process_video(file)
+                cur = prog.add_task(f"{file.relative_to(root_dir)}",total=frames[file])
+                with prog._lock:
+                    tmp = prog._tasks[task]
+                    completed_start = tmp.completed
+                    
+                def update_progress(x):
+                    prog.update(cur,completed=x)
+                    prog.update(task, completed=completed_start+x)
+                    
+                t = process_video(file,update_progress)
+                
+                prog.stop_task(cur)
+                prog.remove_task(cur)
                 if t is None:
-                    prog.advance(task)
+                    prog.update(task,completed=completed_start+frames[file])
                 else:
                     prog.advance(task,t)
 
@@ -355,7 +399,16 @@ def init_train():
             except Exception as e:
                 logging.warning(f"预测输出文件{str(ESTI_FILE)}存在但无法读取", exc_info=e)
 
+def exit_pause():
+    if os.name == 'nt':
+        os.system("pause")
+    elif os.name == 'posix':
+        os.system("read -p 'Press Enter to continue...'")
+
 def main(_root = None):
+    
+    atexit.register(exit_pause)
+    
     global root, esti
     setup_logging()
     tot_bgn = time()
@@ -380,7 +433,12 @@ def main(_root = None):
             logging.warning("Error termination via invalid input.")
             sys.exit(1)
         root = Path(sys.argv[1])
-        
+    
+    if root.name == "compress":
+        logging.critical("请修改目标目录名为非compress。")
+        logging.error("Error termination via invalid input.")
+        sys.exit(1) 
+
     logging.info("开始验证环境")
     test()
     
