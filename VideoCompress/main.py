@@ -13,8 +13,8 @@ import re
 
 root = None
 TRAIN = False
-ESTI_FILE = Path("esti.out")
-CFG_FILE = Path("config.json")
+ESTI_FILE = Path(sys.path[0])/"esti.out"
+CFG_FILE = Path(sys.path[0])/"config.json"
 CFG = {
     "crf":"18",
     "bitrate": None,
@@ -348,9 +348,12 @@ def traverse_directory(root_dir: Path):
                     prog.advance(task,t)
 
 def test():
+    os.environ["PATH"] = Path(__file__).parent.as_posix() + os.pathsep + os.environ["PATH"]
+
     try:
         subprocess.run([CFG["ffmpeg"],"-version"],stdout=-3,stderr=-3).check_returncode()
     except Exception as e:
+        print(__file__)
         logging.critical("无法运行ffmpeg")
         exit(-1)
     try:

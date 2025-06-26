@@ -4,8 +4,9 @@ import sys
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import main as main_program
+from pathlib import Path
 
-CONFIG_NAME = "config.json"
+CONFIG_NAME = Path(sys.path[0])/"config.json"
 
 DEFAULT_CONFIG = {
     "crf": 18,
