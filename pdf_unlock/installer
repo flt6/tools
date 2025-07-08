@@ -34,7 +34,7 @@ Name: "foldercontextmenu"; Description: "为文件夹添加右键菜单"; GroupD
 Name: "folderbackgroundmenu"; Description: "为文件夹空白处添加右键菜单"; GroupDescription: "上下文菜单:"; Flags: checkedonce
 
 [Files]
-Source: "C:\git\tools-3\pdf_unlock\main.dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\git\tools-3\pdf_unlock\dist\main\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; 注意：不要在任何共享系统文件上使用 "Flags: ignoreversion"
 
 [Registry]

@@ -1,0 +1,9 @@
+*.pdf
+*.spec
+tmp*
+*.exe
+dist
+build
+example
+Output
+*build
