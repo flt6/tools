@@ -1,0 +1,22 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\SystemFileAssociations\.pdf\shell\RemovePermissions]
+@="移除权限"
+"MultiSelectModel"="Player"
+
+[HKEY_CLASSES_ROOT\SystemFileAssociations\.pdf\shell\RemovePermissions\command]
+@="\"C:\\Program Files\\pdfUnlock\\main.exe\" \"%1\""
+
+REM 添加文件夹右键菜单
+[HKEY_CLASSES_ROOT\Directory\shell\RemovePermissions]
+@="移除PDF权限"
+
+[HKEY_CLASSES_ROOT\Directory\shell\RemovePermissions\command]
+@="\"C:\\Program Files\\pdfUnlock\\main.exe\" \"%1\""
+
+REM 添加到文件夹背景右键菜单
+[HKEY_CLASSES_ROOT\Directory\Background\shell\RemovePermissions]
+@="移除PDF权限"
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\RemovePermissions\command]
+@="\"C:\\Program Files\\pdfUnlock\\main.exe\" \"%V\""
