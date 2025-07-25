@@ -1,0 +1,55 @@
+; 脚本由 Inno Setup 脚本向导生成。
+; 有关创建 Inno Setup 脚本文件的详细信息，请参阅帮助文档！
+
+#define MyAppName "视频批量压缩"
+#define MyAppVersion "1.3"
+#define MyAppPublisher "flt"
+#define MyAppURL "https://www.flt6.top/"
+
+[Setup]
+; 注意：AppId 的值唯一标识此应用程序。不要在其他应用程序的安装程序中使用相同的 AppId 值。
+; (若要生成新的 GUID，请在 IDE 中单击 "工具|生成 GUID"。)
+AppId={{91E7F53A-CF6E-4352-B62F-6EE52710603D}}
+AppName={#MyAppName}
+AppVersion={#MyAppVersion}
+;AppVerName={#MyAppName} {#MyAppVersion}
+AppPublisher={#MyAppPublisher}
+AppPublisherURL={#MyAppURL}
+AppSupportURL={#MyAppURL}
+AppUpdatesURL={#MyAppURL}
+DefaultDirName={autopf}\VideoCompress
+DefaultGroupName={#MyAppName}
+; 取消注释以下行以在非管理员安装模式下运行 (仅为当前用户安装)。
+;PrivilegesRequired=lowest
+OutputBaseFilename=mysetup
+SolidCompression=yes
+WizardStyle=modern
+
+[Languages]
+Name: "chinesesimp"; MessagesFile: "compiler:Default.isl"
+
+[Tasks]
+Name: "foldercontextmenu"; Description: "为文件夹添加右键菜单"; GroupDescription: "上下文菜单:"; Flags: checkedonce
+Name: "folderbackgroundmenu"; Description: "为文件夹空白处添加右键菜单"; GroupDescription: "上下文菜单:"; Flags: checkedonce
+
+[Files]
+Source: "E:\0学习\高中\录课\河豚\tools\VideoCompress\config_ui.dist"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; 注意：不要在任何共享系统文件上使用 "Flags: ignoreversion"
+
+[Registry]
+; 文件夹右键菜单
+Root: HKCR; Subkey: "Directory\shell\VideoCompress"; ValueType: string; ValueName: ""; ValueData: "批量压缩视频"; Tasks: foldercontextmenu; Flags: uninsdeletekey
+Root: HKCR; Subkey: "Directory\shell\VideoCompress\command"; ValueType: string; ValueName: ""; ValueData: """{app}\config_ui.exe"" ""%1"""; Tasks: foldercontextmenu
+
+; 文件夹背景右键菜单
+Root: HKCR; Subkey: "Directory\Background\shell\VideoCompress"; ValueType: string; ValueName: ""; ValueData: "批量压缩视频"; Tasks: folderbackgroundmenu; Flags: uninsdeletekey
+Root: HKCR; Subkey: "Directory\Background\shell\VideoCompress\command"; ValueType: string; ValueName: ""; ValueData: """{app}\config_ui.exe"" ""%V"""; Tasks: folderbackgroundmenu
+
+[Icons]
+Name: "{group}\配置"; Description: "打开视频压缩配置"; Filename: "{app}\config_ui.exe"
+Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
+
+[UninstallDelete]
+Type: files; Name: "{app}\*"
+Type: dirifempty; Name: "{app}"
+Type: filesandordirs; Name: "{userappdata}\VideoCompress"

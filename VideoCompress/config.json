@@ -1,0 +1,12 @@
+{
+    "save_to": "single",
+    "crf": 18,
+    "codec": "h264",
+    "ffmpeg": "ffmpeg",
+    "video_ext": [
+        ".mp4",
+        ".mkv"
+    ],
+    "extra": [],
+    "train": false
+}
