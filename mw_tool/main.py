@@ -23,20 +23,25 @@ def search_compound(query):
             if comp:
                 compounds = pcp.get_compounds(query, 'smiles', listkey_count=3)
         except Exception:
-            pass
+            st.error("使用smiles精确查询失败")
         # 尝试通过化学式搜索
         if not (isinstance(compounds, list) and len(compounds) != 0):
-            compounds = pcp.get_compounds(query, 'formula', listkey_count=3)
+            try:
+                compounds = pcp.get_compounds(query, 'formula', listkey_count=3)
+            except Exception:
+                st.error("使用化学式精确查询失败")
         if not (isinstance(compounds, list) and len(compounds) != 0):
             # 尝试通过名称搜索
             compounds = pcp.get_compounds(query, 'name', listkey_count=3)
         
         if isinstance(compounds, list) and len(compounds) > 0:
+            st.info("成功查询物质基本信息，正在获取更多数据。")
             return compounds[0]
         else:
             return None
     except Exception as e:
         st.error(f"搜索时发生错误: {str(e)}")
+        # raise e
         return None
 
 def calculate_molecular_weight_from_smiles(smiles):
@@ -86,26 +91,13 @@ def get_pubchem_properties(compound):
             'melting_point': None,
             'boiling_point': None
         }
-        
-        # 首先检查compound对象是否直接有属性
-        density = getattr(compound, 'density', None)
-        melting_point = getattr(compound, 'melting_point', None)
-        boiling_point = getattr(compound, 'boiling_point', None)
-        
-        if density:
-            properties['density'] = density
-        if melting_point:
-            properties['melting_point'] = melting_point
-        if boiling_point:
-            properties['boiling_point'] = boiling_point
-        
-        # 如果没有，尝试通过CID获取更多属性
+
         cid = compound.cid
         
         # 尝试获取物理化学性质相关的记录
         try:
-            url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/{cid}/JSON?response_type=display"
-            data = requests.get(url, timeout=10).json()
+            url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/{cid}/JSON?heading=Experimental+Properties"
+            data = requests.get(url, timeout=3).json()
             for section in data["Record"]["Section"]:
                 if section["TOCHeading"] == "Chemical and Physical Properties":
                     for sub in section["Section"]:
@@ -245,11 +237,11 @@ with col1:
                         pubchem_properties = get_pubchem_properties(compound)
                         
                         compound_data = {
-                            'name': compound.iupac_name or compound.synonyms[0] if compound.synonyms else "未知",
+                            'name': compound.iupac_name,
+                            'cid': compound.cid,
                             'formula': compound.molecular_formula,
                             'molecular_weight': compound.molecular_weight,
-                            'melting_point': getattr(compound, 'melting_point', None),
-                            'density_src': pubchem_properties['density'],
+                            "density_src": pubchem_properties['density'],
                             'melting_point_src': pubchem_properties['melting_point'],
                             'boiling_point_src': pubchem_properties['boiling_point'],
                             'smiles': compound.canonical_smiles,
@@ -315,8 +307,13 @@ with col2:
         
         with info_col2:
             st.metric("化学式", data['formula'])
-            if data['melting_point']:
-                st.metric("熔点 (°C)", data['melting_point'])
+            if data.get("cid"):
+                st.markdown("### 其他数据")
+                st.page_link(f"https://pubchem.ncbi.nlm.nih.gov/compound/{data['cid']}",label="**访问PubChem**")
+                st.image(f"https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid={data['cid']}&t=s","结构式")
+                # st.button("访问PubChem",on_click=lambda :st.dire)
+            # if data['melting_point']:
+            #     st.metric("熔点 (°C)", data['melting_point'])
             # # 显示分子结构图
             # if data.get('inchi') or data.get('smiles'):
             #     st.markdown("分子结构图")
