@@ -2,6 +2,7 @@ import streamlit as st
 import pubchempy as pcp
 from rdkit import Chem
 from rdkit.Chem import rdMolDescriptors
+from rdkit.Chem import Draw
 import requests
 from io import BytesIO
 
@@ -53,7 +54,6 @@ def calculate_molecular_weight_from_smiles(smiles):
 
 def generate_molecule_image(inchi=None, smiles=None):
     """从SMILES生成分子结构图"""
-    return None
     try:
         if inchi:
             mol = Chem.MolFromInchi(inchi)
@@ -317,14 +317,14 @@ with col2:
             st.metric("化学式", data['formula'])
             if data['melting_point']:
                 st.metric("熔点 (°C)", data['melting_point'])
-            # # 显示分子结构图
-            # if data.get('inchi') or data.get('smiles'):
-            #     st.markdown("分子结构图")
-            #     mol_img = generate_molecule_image(inchi=data['inchi'], smiles=data['smiles'])
-            #     if mol_img:
-            #         st.image(mol_img, caption="分子键线式结构图", width=150)
-            #     else:
-            #         st.info("无法生成分子结构图")
+            # 显示分子结构图
+            if data.get('inchi') or data.get('smiles'):
+                st.markdown("分子结构图")
+                mol_img = generate_molecule_image(inchi=data['inchi'], smiles=data['smiles'])
+                if mol_img:
+                    st.image(mol_img, caption="分子键线式结构图", width=150)
+                else:
+                    st.info("无法生成分子结构图")
         
         # 添加熔沸点信息的展开区域
         if data.get('melting_point_src') or data.get('boiling_point_src'):
