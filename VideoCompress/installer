@@ -1,8 +1,8 @@
 ; 脚本由 Inno Setup 脚本向导生成。
 ; 有关创建 Inno Setup 脚本文件的详细信息，请参阅帮助文档！
 
-#define MyAppName "PDF解密"
-#define MyAppVersion "1.1"
+#define MyAppName "视频批量压缩"
+#define MyAppVersion "1.3"
 #define MyAppPublisher "flt"
 #define MyAppURL "https://www.flt6.top/"
 

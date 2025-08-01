@@ -6,9 +6,14 @@ from tkinter import ttk, messagebox, filedialog
 import main as main_program
 from pathlib import Path
 
-CONFIG_NAME = Path(sys.path[0])/"config.json"
+if os.environ.get("INSTALL","0") == "1":
+    CONFIG_NAME = Path(os.getenv("APP_DATA", "C:/"))/"VideoCompress"/"config.json"
+    CONFIG_NAME.parent.mkdir(parents=True, exist_ok=True)
+else:
+    CONFIG_NAME = Path(sys.path[0])/"config.json"
 
 DEFAULT_CONFIG = {
+    "save_to": "multi",
     "crf": 18,
     "codec": "h264",        # could be h264, h264_qsv, h264_nvenc … etc.
     "ffmpeg": "ffmpeg",
@@ -20,6 +25,7 @@ DEFAULT_CONFIG = {
 
 HW_SUFFIXES = ["amf", "qsv", "nvenc"]
 CODECS_BASE = ["h264", "hevc"]
+SAVE_METHOD = ["保存到单一Compress", "每个文件夹下建立Compress"]
 preset_options = {
     "不使用":["","ultrafast","superfast","veryfast","faster","fast","medium","slow","slower","veryslow",],
     "AMD": ["","speed","balanced","quality",],
@@ -95,7 +101,7 @@ class ConfigApp(tk.Tk):
         return var
 
     def _list_var_entry(self, key: str, width: int = 28):
-        """Comma‑separated list entry bound to config[key]."""
+        """Comma-separated list entry bound to config[key]."""
         var = tk.StringVar(value=",".join(self.cfg.get(key, [])))
 
         def _update(*_):
@@ -110,6 +116,13 @@ class ConfigApp(tk.Tk):
         row = 0
         padx_val = 6
         pady_val = 4
+        
+        self._grid_label(row, "输出方式")
+        save_method = tk.StringVar()
+        save_method.set(next((c for c in SAVE_METHOD if self.cfg["save_to"].startswith(c)), SAVE_METHOD[0]))
+        save_method = ttk.Combobox(self, textvariable=save_method, values=SAVE_METHOD, state="readonly", width=20)
+        save_method.grid(row=row, column=1, sticky="w", padx=padx_val, pady=pady_val)
+        row += 1
         # 编解码器
         self._grid_label(row, "编解码器 (h264 / hevc)")
         codec_base = tk.StringVar()
@@ -231,13 +244,14 @@ class ConfigApp(tk.Tk):
 
 
         # 按钮
-        ttk.Button(self, text="保存", command=lambda: self._on_save(codec_base, accel, mode)).grid(row=row, column=0, pady=8, padx=padx_val)
+        ttk.Button(self, text="保存", command=lambda: self._on_save(save_method,codec_base, accel, mode)).grid(row=row, column=0, pady=8, padx=padx_val)
         ttk.Button(self, text="退出", command=self.destroy).grid(row=row, column=1, pady=8)
         _switch_mode()  # 初始启用/禁用
 
     # ── callbacks -----------------------------------------------------------
-    def _on_save(self, codec_base_var, accel_var, mode_var):
+    def _on_save(self, save_method, codec_base_var, accel_var, mode_var):
         # 重构codec字符串，同时处理显卡品牌映射
+        save_to = save_method.get()
         base = codec_base_var.get()
         brand = accel_var.get()
         brand_map = {"NVIDIA": "nvenc", "AMD": "amf", "Intel": "qsv", "不使用": ""}

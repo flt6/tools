@@ -8,6 +8,7 @@ from time import time
 from rich.logging import RichHandler
 from rich.progress import Progress
 from pickle import dumps, loads
+from typing import Optional
 import atexit
 import re
 
@@ -16,6 +17,7 @@ TRAIN = False
 ESTI_FILE = Path(sys.path[0])/"esti.out"
 CFG_FILE = Path(sys.path[0])/"config.json"
 CFG = {
+    "save_to": "single",
     "crf":"18",
     "bitrate": None,
     "codec": "h264",
@@ -214,7 +216,7 @@ def func(sz:int,src=False):
         logging.debug("esti time exception", exc_info=e)
         return -1 if src else "NaN"
     
-def process_video(video_path: Path, update_func=None):
+def process_video(video_path: Path, compress_dir:Optional[Path]=None ,update_func=None):
     global esti_data
     use=None
     sz=video_path.stat().st_size//(1024*1024)
@@ -226,9 +228,13 @@ def process_video(video_path: Path, update_func=None):
         
     
     bgn=time()
-    # 在视频文件所在目录下创建 compress 子目录（如果不存在）
-    compress_dir = video_path.parent / "compress"
-    compress_dir.mkdir(exist_ok=True)
+    if compress_dir is None:
+        # 在视频文件所在目录下创建 compress 子目录（如果不存在）
+        compress_dir = video_path.parent / "compress"
+    else:
+        compress_dir /= video_path.parent.relative_to(root)
+        
+    compress_dir.mkdir(exist_ok=True,parents=True)
     
     # 输出文件路径：与原文件同名，保存在 compress 目录下
     output_file = compress_dir / (video_path.stem + video_path.suffix)
@@ -318,6 +324,9 @@ def traverse_directory(root_dir: Path):
                         avg_frame_rate, duration = proc.stdout.strip().split('\n')
                         tmp = avg_frame_rate.split('/')
                         avg_frame_rate = float(tmp[0]) / float(tmp[1])
+                        if duration == "N/A":
+                            duration = 1000
+                            logging.error(f"无法获取视频信息: {file}, 时长为N/A，默认使用1000s。运行时进度条将出现异常。")
                         duration = float(duration)
                         frames[file] = duration * avg_frame_rate
         
@@ -338,8 +347,12 @@ def traverse_directory(root_dir: Path):
                 def update_progress(x):
                     prog.update(cur,completed=x)
                     prog.update(task, completed=completed_start+x)
+                
+                if CFG["save_to"] == "single":
+                    t = process_video(file, root_dir/"Compress", update_progress)
+                else:
+                    t = process_video(file, update_progress)
                     
-                t = process_video(file,update_progress)
                 
                 prog.stop_task(cur)
                 prog.remove_task(cur)
