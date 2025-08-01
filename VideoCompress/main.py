@@ -177,7 +177,7 @@ def save_esti():
         logging.warning("保存估算数据失败")
         logging.debug("error at save_esti",exc_info=e)
 
-def fmt_time(t:int) -> str:
+def fmt_time(t:float|int) -> str:
     if t>3600:
         return f"{t//3600}h {t//60}min {t%60}s"
     elif t>60:
@@ -236,7 +236,8 @@ def process_video(video_path: Path, update_func=None):
         logging.warning(f"文件{output_file}存在，跳过")
         return use
     
-    command = get_cmd(str(video_path.absolute()),output_file)
+    video_path_str = str(video_path.absolute())
+    command = get_cmd(video_path_str,output_file)
     
     try:
         result = subprocess.Popen(
@@ -253,9 +254,9 @@ def process_video(video_path: Path, update_func=None):
                 line+=result.stderr.read(1)
                 # print(line[-1])
             if 'warning' in line.lower():
-                logging.warning(f"[FFmpeg]({video_path}): {line}")
+                logging.warning(f"[FFmpeg]({video_path_str}): {line}")
             elif 'error' in line.lower():
-                logging.error(f"[FFmpeg]({video_path}): {line}")
+                logging.error(f"[FFmpeg]({video_path_str}): {line}")
             elif "frame=" in line:
                 # print(line,end="")
                 match = re.search(r"frame=\s*(\d+)",line)
@@ -265,11 +266,11 @@ def process_video(video_path: Path, update_func=None):
                         update_func(frame_number)
 
         if result.returncode != 0:
-            logging.error(f"处理文件 {video_path} 失败，返回码: {result.returncode}，cmd={' '.join(command)}")
+            logging.error(f"处理文件 {video_path_str} 失败，返回码: {result.returncode}，cmd={' '.join(command)}")
             logging.error(result.stdout)
             logging.error(result.stderr)
         else:
-            logging.debug(f"文件处理成功: {video_path} -> {output_file}")
+            logging.debug(f"文件处理成功: {video_path_str} -> {output_file}")
             
             end=time()
             if TRAIN:
@@ -278,7 +279,7 @@ def process_video(video_path: Path, update_func=None):
                 
             
     except Exception as e:
-        logging.error(f"执行 ffmpeg 命令时发生异常, 文件：{str(video_path)}，cmd={' '.join(command)}",exc_info=e)
+        logging.error(f"执行 ffmpeg 命令时发生异常, 文件：{str(video_path_str)}，cmd={' '.join(command)}",exc_info=e)
     return use
 
 def traverse_directory(root_dir: Path):

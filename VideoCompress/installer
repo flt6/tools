@@ -1,0 +1,65 @@
+; 脚本由 Inno Setup 脚本向导生成。
+; 有关创建 Inno Setup 脚本文件的详细信息，请参阅帮助文档！
+
+#define MyAppName "PDF解密"
+#define MyAppVersion "1.1"
+#define MyAppPublisher "flt"
+#define MyAppURL "https://www.flt6.top/"
+
+[Setup]
+; 注意：AppId 的值唯一标识此应用程序。不要在其他应用程序的安装程序中使用相同的 AppId 值。
+; (若要生成新的 GUID，请在 IDE 中单击 "工具|生成 GUID"。)
+AppId={{34569C2B-A980-4031-94E1-7CC15988EA75}
+AppName={#MyAppName}
+AppVersion={#MyAppVersion}
+;AppVerName={#MyAppName} {#MyAppVersion}
+AppPublisher={#MyAppPublisher}
+AppPublisherURL={#MyAppURL}
+AppSupportURL={#MyAppURL}
+AppUpdatesURL={#MyAppURL}
+DefaultDirName={autopf}\pdfUnlock
+DefaultGroupName={#MyAppName}
+; 取消注释以下行以在非管理员安装模式下运行 (仅为当前用户安装)。
+;PrivilegesRequired=lowest
+OutputBaseFilename=mysetup
+SolidCompression=yes
+WizardStyle=modern
+
+[Languages]
+Name: "chinesesimp"; MessagesFile: "compiler:Default.isl"
+
+[Tasks]
+Name: "pdfcontextmenu"; Description: "为PDF文件添加右键菜单"; GroupDescription: "上下文菜单:"; Flags: checkedonce
+Name: "foldercontextmenu"; Description: "为文件夹添加右键菜单"; GroupDescription: "上下文菜单:"; Flags: checkedonce
+Name: "folderbackgroundmenu"; Description: "为文件夹空白处添加右键菜单"; GroupDescription: "上下文菜单:"; Flags: checkedonce
+
+[Files]
+Source: "C:\git\tools-3\pdf_unlock\dist\main\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; 注意：不要在任何共享系统文件上使用 "Flags: ignoreversion"
+
+[Registry]
+; PDF文件右键菜单
+Root: HKCR; Subkey: "SystemFileAssociations\.pdf\shell\RemovePermissions"; ValueType: string; ValueName: ""; ValueData: "移除PDF权限"; Tasks: pdfcontextmenu; Flags: uninsdeletekey
+Root: HKCR; Subkey: "SystemFileAssociations\.pdf\shell\RemovePermissions"; ValueType: string; ValueName: "MultiSelectModel"; ValueData: "Player"; Tasks: pdfcontextmenu
+Root: HKCR; Subkey: "SystemFileAssociations\.pdf\shell\RemovePermissions\command"; ValueType: string; ValueName: ""; ValueData: """{app}\main.exe"" ""%1"""; Tasks: pdfcontextmenu
+
+; 文件夹右键菜单
+Root: HKCR; Subkey: "Directory\shell\RemovePermissions"; ValueType: string; ValueName: ""; ValueData: "移除PDF权限"; Tasks: foldercontextmenu; Flags: uninsdeletekey
+Root: HKCR; Subkey: "Directory\shell\RemovePermissions\command"; ValueType: string; ValueName: ""; ValueData: """{app}\main.exe"" ""%1"""; Tasks: foldercontextmenu
+
+; 文件夹背景右键菜单
+Root: HKCR; Subkey: "Directory\Background\shell\RemovePermissions"; ValueType: string; ValueName: ""; ValueData: "移除PDF权限"; Tasks: folderbackgroundmenu; Flags: uninsdeletekey
+Root: HKCR; Subkey: "Directory\Background\shell\RemovePermissions\command"; ValueType: string; ValueName: ""; ValueData: """{app}\main.exe"" ""%V"""; Tasks: folderbackgroundmenu
+
+[Icons]
+Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
+
+[UninstallDelete]
+Type: files; Name: "{app}\*"
+Type: dirifempty; Name: "{app}"
+
+; [UninstallRun]
+; 卸载时清理注册表项
+; Filename: "reg"; Parameters: "delete ""HKCR\SystemFileAssociations\.pdf\shell\RemovePermissions"" /f"; Flags: runhidden; RunOnceId: "DelPDFMenu"
+; Filename: "reg"; Parameters: "delete ""HKCR\Directory\shell\RemovePermissions"" /f"; Flags: runhidden; RunOnceId: "DelFolderMenu"  
+; Filename: "reg"; Parameters: "delete ""HKCR\Directory\Background\shell\RemovePermissions"" /f"; Flags: runhidden; RunOnceId: "DelBgMenu"
