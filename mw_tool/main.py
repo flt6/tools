@@ -227,9 +227,9 @@ with col1:
                             'found': False
                         }
                         st.session_state.compound_data = compound_data
-                        st.success("✅ 分子量计算完成！")
+                        st.success("分子量计算完成！")
                     else:
-                        st.error("❌ 输入的SMILES格式无效")
+                        st.error("输入的SMILES格式无效")
                         st.session_state.compound_data = None
                 else:
                     # 原有的查询逻辑
@@ -265,9 +265,9 @@ with col1:
                                 properties_found.append("熔点")
                             if compound_data['boiling_point_src']:
                                 properties_found.append("沸点")
-                            st.success(f"✅ 查询成功！（找到{', '.join(properties_found)}信息）")
+                            st.success(f"查询成功！（找到{', '.join(properties_found)}信息）")
                         else:
-                            st.success("✅ 查询成功！（未找到物理性质信息）")
+                            st.success("查询成功！（未找到物理性质信息）")
                     
                     else:
                         # 未查询到，检查是否为SMILES
@@ -630,4 +630,4 @@ with col2:
             st.rerun()
     
     else:
-        st.info("👆 请在左侧输入要查询的化学物质")
+        st.info("请在左侧输入要查询的化学物质")
