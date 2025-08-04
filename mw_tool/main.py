@@ -26,13 +26,17 @@ def search_compound(query):
             st.error("使用smiles精确查询失败")
         # 尝试通过化学式搜索
         if not (isinstance(compounds, list) and len(compounds) != 0):
+            # 尝试通过名称搜索
+            try:
+                compounds = pcp.get_compounds(query, 'name', listkey_count=3)
+            except Exception:
+                st.error("使用名称查询失败")
+            
+        if not (isinstance(compounds, list) and len(compounds) != 0):
             try:
                 compounds = pcp.get_compounds(query, 'formula', listkey_count=3)
             except Exception:
                 st.error("使用化学式精确查询失败")
-        if not (isinstance(compounds, list) and len(compounds) != 0):
-            # 尝试通过名称搜索
-            compounds = pcp.get_compounds(query, 'name', listkey_count=3)
         
         if isinstance(compounds, list) and len(compounds) > 0:
             st.info("成功查询物质基本信息，正在获取更多数据。")
