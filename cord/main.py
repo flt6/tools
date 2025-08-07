@@ -128,7 +128,6 @@ def load_data(file):
     else:
         exit()
 
-    num_factors = data.shape[0] * 2
     INFLU_FACTORS = [0.5] * data.shape[0] * 2  # 动态创建数组
     
     ene = data["Energy"].to_numpy()
@@ -159,6 +158,8 @@ with col1:
 
     fig,lines = plot_reaction_coordinate()
     stfig = st.pyplot(fig,False)
+    st.slider("字体大小",8,20, value=12, key="font_size",
+              on_change=lambda: plt.rcParams.update({'font.size': st.session_state.get("font_size", 12)}))
     st.selectbox("导出文件拓展名",[".tiff",".pdf",".png",".pgf"],key="export_format")
     st.download_button(
             label="Download Plot",
