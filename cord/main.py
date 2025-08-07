@@ -54,26 +54,12 @@ def plot_reaction_coordinate(changed=None, _lines=None):
     """
     绘制反应坐标图
     """
-    # if changed is not None:
-    #     if _lines is None:
-    #         raise ValueError("Lines must be provided when changing a slider.")
-    #     lines = _lines
-    #     i = changed//2
-    #     x,y = lines[i].get_data()
-    #     p1=x[0],y[0]
-    #     p2=x[-1],y[-1]
-    #     print(INFLU_FACTORS[i*2+1:i*2+3])
-    #     line = cubic_bezier_with_zero_derivatives(p1,p2, np.linspace(0, 1, 300), INFLU_FACTORS[i*2+1:i*2+3])
-    #     # lines[i].set_data([],[])
-    #     lines[i].set_data(line[0], line[1])
-    #     return
-    
-    
-    
+     
     lines = []
     fig,ax1 = plt.subplots(figsize=(9, 6))
 
     last=(-1,-1)
+    
     
     maxy = data["Energy"].max()
     miny = data["Energy"].min()
@@ -84,14 +70,14 @@ def plot_reaction_coordinate(changed=None, _lines=None):
         if last == (-1,-1):
             last = (1, line["Energy"])
             if not pd.isna(line["Name"]):
-                ax1.annotate(str(line["Name"]), (1, line["Energy"]+varyy*0.03), ha='center')
+                ax1.annotate(str(line["Name"]), (1, line["Energy"]+varyy*K_POS[i]), ha='center')
         else:
             p1 = last[0]+2,line["Energy"]
             x,y = cubic_bezier_with_zero_derivatives(last,p1, np.linspace(0, 1, 300), INFLU_FACTORS[(i*2-2):i*2])
             l = ax1.plot(x, y, "-", color="black")[0]
             lines.append(l)
             if not pd.isna(line["Name"]):
-                p = p1[0],p1[1]+varyy*0.03
+                p = p1[0],p1[1]+varyy*K_POS[i]
                 ax1.annotate(str(line["Name"]), p, ha='center')
             last = p1
         
@@ -99,17 +85,23 @@ def plot_reaction_coordinate(changed=None, _lines=None):
 
     ax1.set_xlabel("Reaction Coordinate")
     ax1.xaxis.set_ticks([])
-    ax1.set_ylabel("Energy (Hartree)")
+    ax1.set_ylabel("Energy (kcal/mol)")
     ax1.set_ylim(miny-varyy*0.1, maxy+varyy*0.1)
     return fig,lines
 
 # 创建图形和坐标轴
 
-def callback_gen(x):
-    def callback():
-        global INFLU_FACTORS
-        INFLU_FACTORS[x-1] = st.session_state.get(f'slider_{x}', 0.5)
-        plot_reaction_coordinate(changed=x, _lines=lines)
+def callback_gen(x,typ=0):
+    if typ:
+        def callback():
+            global K_POS
+            K_POS[x] = st.session_state.get(f'text_slider_{x}', 0.05)
+            plot_reaction_coordinate(changed=x, _lines=lines)
+    else:
+        def callback():
+            global INFLU_FACTORS
+            INFLU_FACTORS[x-1] = st.session_state.get(f'slider_{x}', 0.5)
+            plot_reaction_coordinate(changed=x, _lines=lines)
 
     return callback
 
@@ -138,25 +130,32 @@ def load_data(file):
 
     num_factors = data.shape[0] * 2
     INFLU_FACTORS = [0.5] * data.shape[0] * 2  # 动态创建数组
+    
+    ene = data["Energy"].to_numpy()
+    K_POS = np.where(ene[1:]>ene[:1],0.03,-0.05)
+    K_POS = [-0.05] + K_POS.tolist()
+    st.info(K_POS)
 
+    data["Energy"] -= data["Energy"][0]
+    data["Energy"]*=627.509
 
-    return data, INFLU_FACTORS
+    return data, INFLU_FACTORS,K_POS
 
 
 out_file = io.BytesIO()
 st.set_page_config(
     page_title="反应坐标绘制",
     page_icon=":chart_with_upwards_trend:",
-    layout="centered",
+    layout="wide",
     initial_sidebar_state="expanded"
 )
 st.title("反应坐标绘制")
 st.write("---")
-col1,col2 = st.columns([0.7,0.3],gap="medium")
+col1,col2,col3 = st.columns([0.4,0.25,0.25],gap="medium")
 
 with col1:
     file = st.file_uploader("上传能量文件", type=["xlsx", "xls", "csv"])
-    data, INFLU_FACTORS = load_data(file)
+    data, INFLU_FACTORS,K_POS = load_data(file)
 
     fig,lines = plot_reaction_coordinate()
     stfig = st.pyplot(fig,False)
@@ -184,6 +183,16 @@ with col2:
                 key=f'slider_{i*2+1}',
                 on_change=callback_gen(i*2+1)
             )
+
+with col3:
+    st.write("调整参数以改变文字位置。")
+    for i in range(data.shape[0]):
+        st.slider(
+            f'{data.loc[i,"Name"]}',
+            -0.1, 0.1, value=K_POS[i],
+            key=f'text_slider_{i}',
+            on_change=callback_gen(i,1)
+        )
 
 st.write("---")
 st.dataframe(data)
