@@ -1,3 +1,4 @@
+import molmass
 import streamlit as st
 import pubchempy as pcp
 import re
@@ -10,13 +11,23 @@ import pandas as pd
 import numpy as np
 
 class PubChemCompound:
-
-    def __init__(self, compound: pcp.Compound, extra: Optional[Dict[str, Optional[List[str]]]] = None):
-        self.cid = compound.cid
-        self.name = compound.iupac_name
-        self.formula = compound.molecular_formula
-        self.smiles = compound.isomeric_smiles
-        self.exact_mass = float(compound.exact_mass) if compound.exact_mass else None
+    def __init__(self, 
+                 compound: Optional[pcp.Compound]=None, 
+                 extra: Optional[Dict[str, Optional[List[str]]]] = None,
+                 **kwargs
+                 ):
+        if compound:
+            self.cid = compound.cid
+            self.name = compound.iupac_name
+            self.formula = compound.molecular_formula
+            self.smiles = compound.isomeric_smiles
+            self.exact_mass = float(compound.exact_mass) if compound.exact_mass else None
+        else:
+            self.cid = None
+            self.name = None
+            self.formula = None
+            self.smiles = None
+            self.exact_mass = None
         if extra:
             self.density = extra.get("density")
             self.melting_point = extra.get("melting_point")
@@ -25,6 +36,7 @@ class PubChemCompound:
             self.density = None
             self.melting_point = None
             self.boiling_point = None
+        self.__dict__.update(kwargs)  # 允许传入其他属性
 
 def get_pubchem_properties(cid:str) -> Dict[str, Optional[List[str]]]:
     """从PubChem获取密度、熔点、沸点信息"""
@@ -210,7 +222,11 @@ def reaction_table_page():
     
     st.write("### 反应物质表格")
     st.info("💡 当量为0时，该物质不参与当量计算。修改任意数值时会自动重新计算相关参数。")
-    
+    use_on_change = st.selectbox("是否立即刷新", options=["是", "否"], index=0)
+
+    def raise_NotImplementedError(info=None):
+        """占位函数，避免未实现的回调错误"""
+        raise NotImplementedError("暂未实现延迟计算")
     # 使用data_editor创建可编辑表格
     edited_data = st.data_editor(
         st.session_state.reaction_data,
@@ -258,11 +274,12 @@ def reaction_table_page():
             "备注": st.column_config.TextColumn("备注", width="medium")
         },
         key="reaction_table",
-        on_change=recalculate_reaction_data
+        on_change=recalculate_reaction_data if use_on_change == "是" else raise_NotImplementedError
     )
     
     if st.session_state.get("reaction_table_refresh",0) == 2:
         st.warning("发生多个编辑，无法计算。")
+        st.warning("由于计算失败，当前表格内容可能存在错误。")
         st.session_state.reaction_table_refresh = 0
 
     if st.session_state.get("reaction_table_refresh",0):
@@ -288,12 +305,10 @@ def recalculate_reaction_data():
         # 仅当从 data_editor 拿到变更字典时才处理
         if not isinstance(edits, dict):
             return
-        print(1,edits)
         
          # 处理新增/删除行（若有）
         for new_row in edits.get("added_rows", []) or []:
             # 对象列名对齐现有表头
-            print(new_row)
             if isinstance(new_row, dict):
                 to_add = {col: new_row.get(col, None) for col in df.columns}
                 df = pd.concat([df, pd.DataFrame([to_add])], ignore_index=True)
@@ -327,15 +342,15 @@ def recalculate_reaction_data():
             edited_indices.append(i)
             for col, val in changes.items():
                 if col in df.columns:
+                    df.loc[i, col] = val
                     edited[col] = val
+                    # if col in ["用量(mmol)","质量(g)","体积(mL)","密度(g/mL)","当量"]:
                     if col == "当量":
-                        df.loc[i, col] = val
                         if val != 0:
                             example = df[(df["当量"] > 0) & (df["用量(mmol)"] > 0)]
                             if example.size > 0:
                                 j=0
                                 tmp = example.iloc[j]
-                                print(tmp.name)
                                 while tmp.name == i:
                                     j+=1
                                     tmp = example.iloc[j]
@@ -344,7 +359,6 @@ def recalculate_reaction_data():
 
         basis_idx = edited_indices[-1]  # 以最后一条编辑为本次基准
         
-        print(1,df)
 
         # 数值清洗工具
         def _to_float(x):
@@ -366,14 +380,25 @@ def recalculate_reaction_data():
                 return None
 
         # 基准行的自洽计算（用量/质量/体积）
-        assert edited
+            
         brow = df.loc[basis_idx]
+        if "密度(g/mL)" in edited.keys():
+            df.loc[basis_idx, "密度(g/mL)"] = edited["密度(g/mL)"]
+            if  brow.get("体积(mL)") is None and "质量(g)" in brow.keys():
+                edited["质量(g)"] =  _to_float(brow.get("质量(g)"))
+            elif brow.get("质量(g)") is None and "体积(mL)" in brow.keys():
+                edited["体积(mL)"] =  _to_float(brow.get("体积(mL)"))
+            else:
+                st.error("当质量和体积同时存在时，修改密度为未定义行为。")
+                st.warning("由于计算失败，当前表格内容可能存在错误。")
+                return
+            
         b_mw = _to_float(brow.get("分子量"))
-        b_density = _to_float(brow.get("密度(g/mL)"))
-        b_amount = edited.get("用量(mmol)",None)
-        b_mass = edited.get("质量(g)",None)
-        b_volume = edited.get("体积(mL)",None)
-        b_eq = edited.get("当量",_to_float(brow.get("当量")))
+        b_density = edited.get("密度(g/mL)", _to_float(brow.get("密度(g/mL)")))
+        b_amount = edited.get("用量(mmol)", None)
+        b_mass = edited.get("质量(g)", None)
+        b_volume = edited.get("体积(mL)", None)
+        b_eq = _to_float(brow.get("当量"))
 
         props = calculate_properties(
             molecular_weight=b_mw if b_mw else 0,
@@ -393,7 +418,6 @@ def recalculate_reaction_data():
         if isinstance(_v, (int, float)):
             df.at[basis_idx, "体积(mL)"] = round(float(_v), 6)
 
-        print(2,df)
 
         # 基准行当量为 0 或不可用，则不进行当量联动计算
         if not (b_eq and b_eq > 0):
@@ -407,7 +431,6 @@ def recalculate_reaction_data():
 
         base_per_eq = b_amount_final / b_eq
         
-        print(3,df)
 
         # 按当量推算其他“未编辑行”的用量，并据此计算质量/体积
         for j in range(len(df)):
@@ -432,11 +455,11 @@ def recalculate_reaction_data():
                 if dens_j and dens_j > 0:
                     vol_j = mass_j / dens_j
                     df.at[j, "体积(mL)"] = round(vol_j, 6)
-        print(4,df)
         # 持久化
         st.session_state.reaction_data = df
     except Exception as e:
-        raise e
+        # raise e
+        st.error("重新计算反应数据时出错，表格可能有误")
         print("recalculate_reaction_data error:", e)
 
 def add_compound_to_reaction(compound:PubChemCompound):
@@ -463,16 +486,17 @@ def compound_search_page():
     
     with col1:
         # 选择搜索类型
+        mp = {"name": "名称", "formula": "化学式", "smiles": "SMILES","calc":"化学式（本地计算）"}
         search_type = st.selectbox(
             "选择搜索类型",
-            ["name", "formula", "smiles"],
-            format_func=lambda x: {"name": "名称", "formula": "化学式", "smiles": "SMILES"}[x]
+            mp.keys(),
+            format_func=lambda x: mp[x]
         )
     
     with col2:
         # 输入搜索词
         query = st.text_input(
-            f"输入{'名称' if search_type == 'name' else '化学式' if search_type == 'formula' else 'SMILES'}",
+            f"输入{mp[search_type]}",
             placeholder="例如: ethanol, C2H6O, CCO"
         )
     
@@ -480,18 +504,34 @@ def compound_search_page():
     
     # 主要内容区域
     if search_button and query:
-        with st.spinner("正在搜索..."):
-            _compound = search_compound(query, search_type)
-
-        if _compound is not None:
-            st.info("找到匹配的化合物，正在获取详细信息...")
-            # 在session_state中存储化合物信息
-            additional_props = get_pubchem_properties(str(_compound.cid))
-            st.session_state.compound = PubChemCompound(cast(pcp.Compound, _compound), additional_props)
-
+        if search_type == "calc":
+            try:
+                mass = molmass.Formula(query).mass
+                st.session_state.compound = PubChemCompound(exact_mass=mass, formula=query)
+            except Exception as e:
+                st.error(f"计算分子量时出错: {e}")
         else:
-            st.error("未找到匹配的化合物，请检查输入并重试。")
-            return
+            with st.spinner("正在搜索..."):
+                _compound = search_compound(query, search_type)
+            
+            print(_compound,search_type)
+
+            if _compound is not None:
+                st.info("找到匹配的化合物，正在获取详细信息...")
+                # 在session_state中存储化合物信息
+                additional_props = get_pubchem_properties(str(_compound.cid))
+                st.session_state.compound = PubChemCompound(cast(pcp.Compound, _compound), additional_props)
+
+            elif search_type == "formula":
+                try:
+                    mass = molmass.Formula(query).mass
+                    st.session_state.compound = PubChemCompound(exact_mass=mass, formula=query)
+                    print(mass)
+                    st.info("根据化学式计算得到分子量")
+                except Exception as e:
+                    st.error(f"计算分子量时出错: {e}")
+            else:
+                st.error("未找到匹配的化合物，请检查输入并重试。")
     
     # 如果session_state中有化合物信息，显示结果
     if hasattr(st.session_state, 'compound') and st.session_state.compound:
@@ -503,21 +543,14 @@ def compound_search_page():
         
         with col1:
             st.header("📊 基本信息")
-
+            
             st.metric("物质名称", compound.name or "未知")
             st.metric("化学式", compound.formula or "未知")
             st.metric("分子量", f"{compound.exact_mass:.4f} g/mol" if compound.exact_mass else "未知")
-            st.markdown(f"[**访问PubChem页面**](https://pubchem.ncbi.nlm.nih.gov/compound/{compound.cid})")
+            if compound.cid:
+                st.markdown(f"[**访问PubChem页面**](https://pubchem.ncbi.nlm.nih.gov/compound/{compound.cid})")
             # 创建信息表格
-            info_data = {
-                "属性": ["物质名称", "化学式", "分子量 (Exact Mass)", "CID"],
-                "值": [
-                    compound.name or "未知",
-                    compound.formula or "未知",
-                    f"{compound.exact_mass:.4f} g/mol" if compound.exact_mass else "未知",
-                    str(compound.cid)
-                ]
-            }
+            
 
             # st.table(info_data)
 
@@ -536,8 +569,8 @@ def compound_search_page():
         st.markdown("---")
         
         # 密度信息
-        with st.expander("📏 密度信息", expanded=False):
-            if compound.density:
+        if compound.density:
+            with st.expander("📏 密度信息", expanded=False):
                 st.subheader("可用密度数据:")
                 
                 # 初始化session_state中的密度选择
@@ -571,16 +604,16 @@ def compound_search_page():
                 )
                 st.session_state.custom_density = custom_density
                 st.session_state.selected_density_idx = selected_idx
-            else:
-                st.warning("未找到密度数据")
-                st.session_state.custom_density = None
+        else:
+            st.session_state.custom_density = None
         
         # 熔沸点信息
-        with st.expander("🌡️ 熔沸点信息", expanded=False):
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.subheader("熔点")
+        if compound.melting_point or compound.boiling_point:
+            with st.expander("🌡️ 熔沸点信息", expanded=False):
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    st.subheader("熔点")
                 if compound.melting_point:
                     for mp in compound.melting_point:
                         st.write(f"• {mp}")
@@ -643,7 +676,6 @@ def compound_search_page():
                     )
                 else:
                     volume_ml = None
-                    st.info("需要密度数据才能计算体积")
             
             # 检测哪个值发生了变化并重新计算
             current_values = {
