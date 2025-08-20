@@ -775,13 +775,13 @@ def compound_search_page():
                 else:
                     st.warning("未找到熔点数据")
             
-            with col2:
-                st.subheader("沸点")
-                if compound.boiling_point:
-                    for bp in compound.boiling_point:
-                        st.write(f"• {bp}")
-                else:
-                    st.warning("未找到沸点数据")
+                with col2:
+                    st.subheader("沸点")
+                    if compound.boiling_point:
+                        for bp in compound.boiling_point:
+                            st.write(f"• {bp}")
+                    else:
+                        st.warning("未找到沸点数据")
         
         # 计算器
         st.markdown("---")
