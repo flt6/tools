@@ -203,8 +203,39 @@ def calculate_properties(molecular_weight: float, amount_mmol: Optional[float] =
 
 def reaction_table_page():
     """反应表格页面"""
-    st.header("⚗️ 反应表格")
-    
+    st.header("反应表格")
+
+    with st.expander("**使用说明**", expanded=False):
+        st.markdown('''在下方的表格中，您可以输入反应数据，程序会尝试计算其余各项。当量为0时，该物质不参与当量计算。
+### 立即计算
+
+选中`立即计算`选项后，输入后立即尝试计算修改部分，您可以实时查看计算结果。但请注意，请勿同时修改多项内容。如果输入某项后计算未正确进行，这是潜在的缺陷，请反馈。
+
+不保证在您主动修改计算结果后程序能正确处理（例如，程序算出质量后您主动修改），通常这会伴随着警告，但也有可能遗漏某些情况。
+
+### 延迟计算
+
+不选中`立即计算`后，在完成输入后，您可以点击“计算”按钮，程序会尝试计算所有可用的结果。
+
+程序在计算时会检查是否有冗余数据，例如同时给定分子量、用量、质量，并拒绝在这种情况下计算。您可以选中`不使用检查`选项来禁用检查，但请保证数据自洽（即使得所有已知量之间的关系成立），否则会发生未定义行为。
+
+如果计算后您想要修改或补充内容再次计算，请选中`不使用检查`选项。
+''')
+        with st.expander("关于未定义行为"):
+            st.markdown('''程序内部计算顺序为
+1. n -> mass
+2. mass -> n
+3. mass -> volumn
+4. volumn -> mass
+5. mass -> n
+6. eqiv -> n
+7. n -> mass
+8. mass -> volumn
+
+如果存在不自洽的数据，您可以通过上述内容预测程序行为。但这不应该在实际使用中依赖，因为在不同版本下实现可能发生变化。
+
+''')
+
     # 初始化数据
     if 'reaction_data' not in st.session_state:
         df = pd.DataFrame([[None,None,None,None,None,None,None,None]],columns=[
@@ -222,12 +253,11 @@ def reaction_table_page():
         st.session_state.reaction_data = df
         
     
-    st.write("### 反应物质表格")
-    use_on_change = st.checkbox("是否立即计算", value=True)
-    st.info(f"💡 当量为0时，该物质不参与当量计算。"+("如果保证表格已有内容自洽，可选中不使用检查。" if not use_on_change else ""))
+    st.info(f"💡 当量为0时，该物质不参与当量计算。")
+    use_on_change = st.checkbox("立即计算", value=True)
     if not use_on_change:
-        st.button("计算",on_click=calc_reaction_data)
         st.checkbox("不使用检查", value=False,key="no_check",)
+        st.button("计算",on_click=calc_reaction_data,type="primary")
 
     # 使用data_editor创建可编辑表格
     edited_data = st.data_editor(
@@ -359,7 +389,17 @@ def calc_reaction_data():
             fil = df["rho"].notna() & df["mass"].notna() & eqfil
             df.loc[fil, "vol"] = df[fil]["mass"] / df[fil]["rho"]  # g -> mL，再除以 g/mL
         
-        df.columns = [
+        
+
+    except Exception as e:
+        # if "df" in locals():
+        #     st.session_state.reaction_data = df
+        st.error("计算过程中出错，表格可能有误")
+        print("calc_reaction_data error:", traceback.format_exc())
+        return
+    finally:
+        if "df" in locals():
+            df.columns = [
                 "物质",
                 "分子量",
                 "当量",
@@ -368,15 +408,8 @@ def calc_reaction_data():
                 "密度(g/mL)",
                 "体积(mL)",
                 "备注"
-        ]
-        st.session_state.reaction_data = df
-
-    except Exception as e:
-        if "df" in locals():
+            ]
             st.session_state.reaction_data = df
-        st.error("计算过程中出错，表格可能有误")
-        print("calc_reaction_data error:", traceback.format_exc())
-        return
 
 def recalculate_reaction_data():
     """根据最近一次编辑的行及当量，推算其他未编辑行的用量，并更新质量/体积。"""
@@ -579,8 +612,31 @@ def add_compound_to_reaction(compound:PubChemCompound):
 def compound_search_page():
     """化合物搜索页面"""
     # 输入区域
-    st.header("📝 输入查询条件")
-    
+
+
+    with st.expander("**使用说明**"):
+        st.markdown("""
+        1. **选择搜索类型**: 
+           - 名称: 输入化合物的常用名称或IUPAC名称
+           - 化学式: 输入分子式 (如 C2H6O)
+           - SMILES: 输入SMILES字符串 (如 CCO)
+        
+        2. **输入查询条件**: 在输入框中输入相应的查询词
+        
+        3. **点击搜索**: 系统将从PubChem数据库中查询匹配的化合物
+        
+        4. **查看结果**: 
+           - 基本信息包括名称、化学式、分子量和2D结构图
+           - 密度和熔沸点信息可在展开区域查看
+           - 计算器可帮助您计算用量、质量和体积的关系
+        
+        ### 示例查询
+        - **名称**: ethanol, water, glucose
+        - **化学式**: C2H6O, H2O, C6H12O6
+        - **SMILES**: CCO, O, C(C1C(C(C(C(O1)O)O)O)O)O
+        """)
+        
+    st.header("查询条件")
     col1, col2 = st.columns([1, 2])
     
     with col1:
@@ -802,45 +858,19 @@ def compound_search_page():
                 st.rerun()
         else:
             st.warning("无分子量数据，无法进行计算")
+
     
-    else:
-        # 显示使用说明
-        st.info("👈 请在左侧输入化合物信息开始查询")
-        
-        st.markdown("""
-        ### 🔍 使用说明
-        
-        1. **选择搜索类型**: 
-           - 名称: 输入化合物的常用名称或IUPAC名称
-           - 化学式: 输入分子式 (如 C2H6O)
-           - SMILES: 输入SMILES字符串 (如 CCO)
-        
-        2. **输入查询条件**: 在输入框中输入相应的查询词
-        
-        3. **点击搜索**: 系统将从PubChem数据库中查询匹配的化合物
-        
-        4. **查看结果**: 
-           - 基本信息包括名称、化学式、分子量和2D结构图
-           - 密度和熔沸点信息可在展开区域查看
-           - 计算器可帮助您计算用量、质量和体积的关系
-        
-        ### 📝 示例查询
-        - **名称**: ethanol, water, glucose
-        - **化学式**: C2H6O, H2O, C6H12O6
-        - **SMILES**: CCO, O, C(C1C(C(C(C(O1)O)O)O)O)O
-        """)
 
 
 def main():
     st.set_page_config(
-        page_title="PubChem化合物查询工具",
+        page_title="有机合成用量计算工具",
         page_icon="🧪",
         layout="wide"
     )
     
     # 侧边栏导航
     with st.sidebar:
-        st.title("🧪 化学工具")
         page = st.radio(
             "选择功能页面",
             ["化合物查询", "反应表格"],

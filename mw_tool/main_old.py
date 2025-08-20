@@ -60,31 +60,6 @@ def calculate_molecular_weight_from_smiles(smiles):
         st.error(f"SMILES分子量计算错误: {str(e)}")
         return None
 
-def generate_molecule_image(inchi=None, smiles=None):
-    """从SMILES生成分子结构图"""
-    return None
-    try:
-        if inchi:
-            mol = Chem.MolFromInchi(inchi)
-        elif smiles:
-            mol = Chem.MolFromSmiles(smiles)
-        else:
-            st.error("必须提供InChI或SMILES字符串")
-            return None
-        if mol:
-            # 生成分子图像
-            img = Draw.MolToImage(mol, size=(300, 300))
-            # 将图像转换为字节流
-            img_buffer = BytesIO()
-            img.save("a.png")
-            img.save(img_buffer, format='PNG')
-            img_buffer.seek(0)
-            return img_buffer
-        else:
-            return None
-    except Exception as e:
-        st.error(f"分子结构图生成错误: {str(e)}")
-        return None
 
 def get_pubchem_properties(compound):
     """从PubChem获取密度、熔点、沸点信息"""
@@ -143,16 +118,6 @@ def get_pubchem_properties(compound):
             'melting_point': None,
             'boiling_point': None
         }
-
-def is_liquid_at_room_temp(melting_point):
-    """判断常温下是否为液体（假设常温为25°C）"""
-    if melting_point is None:
-        return False
-    try:
-        mp = float(melting_point)
-        return mp < 25  # 熔点低于25°C认为是液体
-    except:
-        return False
 
 def sync_calculations(compound_data, mmol=None, mass=None, volume=None, changed_field=None):
     """同步计算mmol、质量、体积"""
@@ -315,18 +280,7 @@ with col2:
                 st.markdown("### 其他数据")
                 st.page_link(f"https://pubchem.ncbi.nlm.nih.gov/compound/{data['cid']}",label="**访问PubChem**")
                 st.image(f"https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid={data['cid']}&t=s","结构式")
-                # st.button("访问PubChem",on_click=lambda :st.dire)
-            # if data['melting_point']:
-            #     st.metric("熔点 (°C)", data['melting_point'])
-            # # 显示分子结构图
-            # if data.get('inchi') or data.get('smiles'):
-            #     st.markdown("分子结构图")
-            #     mol_img = generate_molecule_image(inchi=data['inchi'], smiles=data['smiles'])
-            #     if mol_img:
-            #         st.image(mol_img, caption="分子键线式结构图", width=150)
-            #     else:
-            #         st.info("无法生成分子结构图")
-        
+
         # 添加熔沸点信息的展开区域
         if data.get('melting_point_src') or data.get('boiling_point_src'):
             with st.expander("熔沸点信息", expanded=False):
@@ -357,9 +311,6 @@ with col2:
             melting_point = re.search(r'\d*\.\d+', melting_data[0])
             if melting_point:
                 melting_point = float(melting_point.group())
-            is_liquid = is_liquid_at_room_temp(melting_point)
-        else:
-            is_liquid = False
 
         # 检测值变化并执行计算
         def handle_change(field_name, new_value, current_value):
@@ -427,10 +378,7 @@ with col2:
         # 密度显示选项
         show_density = False
         if data['density_src']:
-            if is_liquid:
-                show_density = st.checkbox("显示密度信息", value=True)
-            else:
-                show_density = st.checkbox("显示密度信息", value=False)
+            show_density = st.checkbox("显示密度信息", value=False)
             
             if show_density:
                 import re
