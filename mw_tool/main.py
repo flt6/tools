@@ -769,11 +769,11 @@ def compound_search_page():
 
                 with col1:
                     st.subheader("熔点")
-                if compound.melting_point:
-                    for mp in compound.melting_point:
-                        st.write(f"• {mp}")
-                else:
-                    st.warning("未找到熔点数据")
+                    if compound.melting_point:
+                        for mp in compound.melting_point:
+                            st.write(f"• {mp}")
+                    else:
+                        st.warning("未找到熔点数据")
             
                 with col2:
                     st.subheader("沸点")
