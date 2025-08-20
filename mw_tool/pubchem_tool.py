@@ -209,7 +209,7 @@ def reaction_table_page():
     
     # 初始化数据
     if 'reaction_data' not in st.session_state:
-        st.session_state.reaction_data = pd.DataFrame([[None,None,None,None,None,None,None,None]],columns=[
+        df = pd.DataFrame([[None,None,None,None,None,None,None,None]],columns=[
                 "物质",
                 "分子量",
                 "当量",
@@ -218,15 +218,19 @@ def reaction_table_page():
                 "密度(g/mL)",
                 "体积(mL)",
                 "备注"
-        ])
+        ],dtype="float")
+        df["物质"] = df["物质"].astype("string")
+        df["备注"] = df["备注"].astype("string")
+        st.session_state.reaction_data = df
+        
     
     st.write("### 反应物质表格")
-    st.info("💡 当量为0时，该物质不参与当量计算。修改任意数值时会自动重新计算相关参数。")
-    use_on_change = st.selectbox("是否立即刷新", options=["是", "否"], index=0)
+    use_on_change = st.checkbox("是否立即计算", value=True)
+    st.info(f"💡 当量为0时，该物质不参与当量计算。"+("如果保证表格已有内容自洽，可选中不使用检查。" if not use_on_change else ""))
+    if not use_on_change:
+        st.button("计算",on_click=calc_reaction_data)
+        st.checkbox("不使用检查", value=False,key="no_check",)
 
-    def raise_NotImplementedError(info=None):
-        """占位函数，避免未实现的回调错误"""
-        raise NotImplementedError("暂未实现延迟计算")
     # 使用data_editor创建可编辑表格
     edited_data = st.data_editor(
         st.session_state.reaction_data,
@@ -274,9 +278,12 @@ def reaction_table_page():
             "备注": st.column_config.TextColumn("备注", width="medium")
         },
         key="reaction_table",
-        on_change=recalculate_reaction_data if use_on_change == "是" else raise_NotImplementedError
+        on_change=recalculate_reaction_data if use_on_change else None
     )
-    
+
+    if not use_on_change and isinstance(edited_data, pd.DataFrame):
+        st.session_state.static_reaction_data = edited_data
+        
     if st.session_state.get("reaction_table_refresh",0) == 2:
         st.warning("发生多个编辑，无法计算。")
         st.warning("由于计算失败，当前表格内容可能存在错误。")
@@ -286,11 +293,87 @@ def reaction_table_page():
         st.session_state.reaction_data = edited_data
         st.session_state.reaction_table_refresh = 2
         st.rerun()
+        
     # print(st.session_state.reaction_data)
     # 仅当返回的是 DataFrame 时再回写；如果是变更字典则由回调处理
     # if isinstance(edited_data, pd.DataFrame):
     #     print("Edited DataFrame:", edited_data)
     #     st.session_state.reaction_data = edited_data
+
+def calc_reaction_data():
+    try:
+        df: pd.DataFrame = st.session_state.get("static_reaction_data",None)
+        if not isinstance(df, pd.DataFrame):
+            st.error("反应数据格式不正确")
+            raise ValueError("reaction_data must be a DataFrame")
+        df.columns = ["name","mw","eq","mol","mass","rho","vol","note"]
+
+        # validate
+        if not st.session_state.get("no_check",False):
+            if any(df["mw"].notna() & df["mol"].notna() & df["mass"].notna()):
+                st.error("分子量、物质的量和质量不能同时存在")
+                raise ValueError
+            if any((df["mass"].notna() | (df["mw"].notna() & df["mol"].notna())) & df["vol"].notna() & df["rho"].notna()):
+                st.error("质量、体积和密度不能同时存在或可求")
+                raise ValueError
+
+        # mol -> mass
+        fil = df["mw"].notna() & df["mol"].notna()
+        df.loc[fil, "mass"] = df[fil]["mol"] * df[f"{'mw'}"] / 1000.0  # mmol -> mol，再乘以 g/mol
+        
+        # mass -> mol
+        fil = df["mw"].notna() & df["mass"].notna()
+        df.loc[fil, "mol"] = df[fil]["mass"] * 1000.0 / df[f"{'mw'}"]  # g -> mol，再除以 g/mol
+        
+        # mass -> vol
+        fil = df["mass"].notna() & df["rho"].notna()
+        df.loc[fil, "vol"] = df[fil]["mass"] / df[fil]["rho"]  # g -> mL，再除以 g/mL
+
+        # vol -> mass
+        fil = df["vol"].notna() & df["rho"].notna()
+        df.loc[fil, "mass"] = df[fil]["vol"] * df[fil]["rho"]  # mL -> g，再乘以 g/mL
+        
+        # mass -> mol
+        fil = df["mw"].notna() & df["mass"].notna()
+        df.loc[fil, "mol"] = df[fil]["mass"] * 1000.0 / df[f"{'mw'}"]  # g -> mol，再除以 g/mol
+        
+        eql = df[(df["eq"] > 0) & (df["mol"] > 0)]
+        if not st.session_state.get("no_check",False):
+            if eql.size > 1:
+                st.error("对于当量存在物质，只允许一个物质设置用量、质量或体积")
+                raise ValueError
+        if eql.size == 0 and not df[(df["eq"] > 0)].empty:
+            st.error("设置了当量，但是均没有设置用量、质量或体积")
+            raise ValueError
+        if not eql.empty:
+            ref = eql.iloc[0]
+            base = ref["mol"]/ref["eq"]
+            eqfil = df["eq"] > 0
+            df.loc[eqfil, "mol"] = df[eqfil]["eq"] * base
+            
+            fil = df["mw"].notna() & eqfil
+            df.loc[fil, "mass"] = df[fil]["mol"] * df[f"{'mw'}"] / 1000.0  # mmol -> mol，再乘以 g/mol
+            
+            fil = df["rho"].notna() & df["mass"].notna() & eqfil
+            df.loc[fil, "vol"] = df[fil]["mass"] / df[fil]["rho"]  # g -> mL，再除以 g/mL
+        
+        df.columns = [
+                "物质",
+                "分子量",
+                "当量",
+                "用量(mmol)",
+                "质量(g)",
+                "密度(g/mL)",
+                "体积(mL)",
+                "备注"
+        ]
+        st.session_state.reaction_data = df
+
+    except Exception as e:
+        st.error("计算过程中出错，表格可能有误")
+        raise e
+        print("calc_reaction_data error:", e)
+        return
 
 def recalculate_reaction_data():
     """根据最近一次编辑的行及当量，推算其他未编辑行的用量，并更新质量/体积。"""
@@ -382,17 +465,35 @@ def recalculate_reaction_data():
         # 基准行的自洽计算（用量/质量/体积）
             
         brow = df.loc[basis_idx]
+
+        if "物质" in edited.keys() and pd.isna(brow["分子量"]) and "分子量" not in edited.keys():
+            try:
+                mass  = molmass.Formula(edited["物质"]).mass
+                edited["分子量"] = mass
+                df.loc[basis_idx, "分子量"] = mass
+            except Exception as e:
+                pass
+
         if "密度(g/mL)" in edited.keys():
-            df.loc[basis_idx, "密度(g/mL)"] = edited["密度(g/mL)"]
-            if  brow.get("体积(mL)") is None and "质量(g)" in brow.keys():
+            if  _to_float(brow.get("体积(mL)")) is None and "质量(g)" in brow.keys():
                 edited["质量(g)"] =  _to_float(brow.get("质量(g)"))
-            elif brow.get("质量(g)") is None and "体积(mL)" in brow.keys():
+            elif _to_float(brow.get("质量(g)")) is None and "体积(mL)" in brow.keys():
                 edited["体积(mL)"] =  _to_float(brow.get("体积(mL)"))
             else:
+                print(brow)
                 st.error("当质量和体积同时存在时，修改密度为未定义行为。")
-                st.warning("由于计算失败，当前表格内容可能存在错误。")
-                return
+                raise ValueError
+        
+        if "分子量" in edited.keys():
+            if all(pd.notna(brow[["质量(g)","用量(mmol)"]])):
+                st.error("当质量和用量同时存在时，修改分子量为未定义行为。")
+                raise ValueError
+            if pd.notna(brow.get("质量(g)")):
+                edited["质量(g)"] = _to_float(brow.get("质量(g)"))
+            if pd.notna(brow.get("用量(mmol)")):
+                edited["用量(mmol)"] = _to_float(brow.get("用量(mmol)"))
             
+
         b_mw = _to_float(brow.get("分子量"))
         b_density = edited.get("密度(g/mL)", _to_float(brow.get("密度(g/mL)")))
         b_amount = edited.get("用量(mmol)", None)
@@ -459,7 +560,7 @@ def recalculate_reaction_data():
         st.session_state.reaction_data = df
     except Exception as e:
         # raise e
-        st.error("重新计算反应数据时出错，表格可能有误")
+        st.warning("重新计算反应数据时出错，表格可能有误")
         print("recalculate_reaction_data error:", e)
 
 def add_compound_to_reaction(compound:PubChemCompound):
