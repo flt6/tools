@@ -3,12 +3,10 @@ import streamlit as st
 import pubchempy as pcp
 import re
 from typing import Optional, Dict, List, cast
-from io import BytesIO
-import base64
-from PIL import Image
 import requests
 import pandas as pd
 import numpy as np
+import traceback
 
 class PubChemCompound:
     def __init__(self, 
@@ -293,12 +291,13 @@ def reaction_table_page():
         st.session_state.reaction_data = edited_data
         st.session_state.reaction_table_refresh = 2
         st.rerun()
-        
-    # print(st.session_state.reaction_data)
-    # 仅当返回的是 DataFrame 时再回写；如果是变更字典则由回调处理
-    # if isinstance(edited_data, pd.DataFrame):
-    #     print("Edited DataFrame:", edited_data)
-    #     st.session_state.reaction_data = edited_data
+
+def get_mass_safe(chemical_name: str) -> float:
+    try:
+        mass = molmass.Formula(chemical_name).mass
+        return mass
+    except Exception as e:
+        return float("nan")
 
 def calc_reaction_data():
     try:
@@ -316,6 +315,9 @@ def calc_reaction_data():
             if any((df["mass"].notna() | (df["mw"].notna() & df["mol"].notna())) & df["vol"].notna() & df["rho"].notna()):
                 st.error("质量、体积和密度不能同时存在或可求")
                 raise ValueError
+
+        fil = df["mw"].isna() & df["name"].notna()
+        df.loc[fil, "mw"] = df[fil]["name"].apply(get_mass_safe)
 
         # mol -> mass
         fil = df["mw"].notna() & df["mol"].notna()
@@ -339,10 +341,10 @@ def calc_reaction_data():
         
         eql = df[(df["eq"] > 0) & (df["mol"] > 0)]
         if not st.session_state.get("no_check",False):
-            if eql.size > 1:
+            if eql.shape[0] > 1:
                 st.error("对于当量存在物质，只允许一个物质设置用量、质量或体积")
                 raise ValueError
-        if eql.size == 0 and not df[(df["eq"] > 0)].empty:
+        if eql.shape[0] == 0 and not df[(df["eq"] > 0)].empty:
             st.error("设置了当量，但是均没有设置用量、质量或体积")
             raise ValueError
         if not eql.empty:
@@ -370,9 +372,10 @@ def calc_reaction_data():
         st.session_state.reaction_data = df
 
     except Exception as e:
+        if "df" in locals():
+            st.session_state.reaction_data = df
         st.error("计算过程中出错，表格可能有误")
-        raise e
-        print("calc_reaction_data error:", e)
+        print("calc_reaction_data error:", traceback.format_exc())
         return
 
 def recalculate_reaction_data():
@@ -467,12 +470,7 @@ def recalculate_reaction_data():
         brow = df.loc[basis_idx]
 
         if "物质" in edited.keys() and pd.isna(brow["分子量"]) and "分子量" not in edited.keys():
-            try:
-                mass  = molmass.Formula(edited["物质"]).mass
-                edited["分子量"] = mass
-                df.loc[basis_idx, "分子量"] = mass
-            except Exception as e:
-                pass
+            df.loc[basis_idx, "分子量"] = get_mass_safe(edited["物质"])
 
         if "密度(g/mL)" in edited.keys():
             if  _to_float(brow.get("体积(mL)")) is None and "质量(g)" in brow.keys():
