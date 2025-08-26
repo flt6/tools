@@ -220,11 +220,11 @@ def process_video(video_path: Path, compress_dir:Optional[Path]=None ,update_fun
     global esti_data
     use=None
     sz=video_path.stat().st_size//(1024*1024)
-    if esti is not None or TRAIN:
-        use = func(sz,True)
-        logging.info(f"开始处理文件: {video_path.relative_to(root)}，大小{sz}M，预计{fmt_time(use)}")
-    else:
-        logging.info(f"开始处理文件: {video_path.relative_to(root)}，大小{sz}M")
+    # if esti is not None or TRAIN:
+    #     use = func(sz,True)
+    #     logging.info(f"开始处理文件: {video_path.relative_to(root)}，大小{sz}M，预计{fmt_time(use)}")
+    # else:
+    #     logging.info(f"开始处理文件: {video_path.relative_to(root)}，大小{sz}M")
         
     
     bgn=time()
@@ -285,13 +285,14 @@ def process_video(video_path: Path, compress_dir:Optional[Path]=None ,update_fun
                 
             
     except Exception as e:
-        logging.error(f"执行 ffmpeg 命令时发生异常, 文件：{str(video_path_str)}，cmd={' '.join(command)}",exc_info=e)
+        logging.error(f"执行 ffmpeg 命令时发生异常, 文件：{str(video_path_str)}，cmd={' '.join(map(str,command))}",exc_info=e)
     return use
 
 def traverse_directory(root_dir: Path):
     video_extensions = set(CFG["video_ext"])
     sm=None
     if esti is not None:
+        raise DeprecationWarning("不再支持训练模式")
         logging.info(f"正在估算时间（当存在大量小文件时，估算值将会很离谱）")
         sm = 0
         for file in root_dir.rglob("*"):
@@ -309,24 +310,27 @@ def traverse_directory(root_dir: Path):
         # logging.info("正在估算视频帧数，用于显示进度。")
         with Progress() as prog:
             task = prog.add_task("正在获取视频信息",total=len(list(root_dir.rglob("*"))))
-            frames = {}
+            frames:dict[Path,float] = {}
             for file in root_dir.rglob("*"):
                 prog.advance(task)
-                if file.parent.name == "compress":continue
+                if file.parent.name == "Compress":continue
                 if file.is_file() and file.suffix.lower() in video_extensions:
-                    cmd = f'ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate,duration -of default=nokey=1:noprint_wrappers=1 "{str(file)}'
+                    cmd = f'ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate,duration -of default=nokey=1:noprint_wrappers=1'.split()
+                    cmd.append(str(file))
                     proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
                     if proc.returncode != 0:
-                        logging.error(f"无法获取视频信息: {file}, 返回码: {proc.returncode}")
-                        frames[file] = 60
+                        logging.debug(f"无法获取视频信息: {file}, 返回码: {proc.returncode}")
+                        logging.debug(proc.stdout)
+                        logging.debug(proc.stderr)
+                        frames[file] = 0
                         continue
                     if proc.stdout.strip():
                         avg_frame_rate, duration = proc.stdout.strip().split('\n')
                         tmp = avg_frame_rate.split('/')
                         avg_frame_rate = float(tmp[0]) / float(tmp[1])
                         if duration == "N/A":
-                            duration = 1000
-                            logging.error(f"无法获取视频信息: {file}, 时长为N/A，默认使用1000s。运行时进度条将出现异常。")
+                            duration = 0
+                            logging.debug(f"无法获取视频信息: {file}, 时长为N/A，默认使用0s。运行时进度条将出现异常。")
                         duration = float(duration)
                         frames[file] = duration * avg_frame_rate
         
@@ -336,17 +340,25 @@ def traverse_directory(root_dir: Path):
     
     with Progress() as prog:
         task = prog.add_task("总进度",total=sm if sm is not None else sum(frames.values()))
-        for file in root_dir.rglob("*"):
-            if file.parent.name == "compress":continue
+        for file in frames.keys():
+            # if "Compress" in file.relative_to(root_dir).parents:continue
             if file.is_file() and file.suffix.lower() in video_extensions:
-                cur = prog.add_task(f"{file.relative_to(root_dir)}",total=frames[file])
+                filename = file.relative_to(root_dir)
+                if frames[file] == 0:
+                    logging.warning("当前文件时长获取失败，进度条持续为0为正常现象。")
+                    cur = prog.add_task(f"{filename}")
+                else:
+                    cur = prog.add_task(f"{filename}",total=frames[file])
                 with prog._lock:
                     tmp = prog._tasks[task]
                     completed_start = tmp.completed
                     
                 def update_progress(x):
-                    prog.update(cur,completed=x)
-                    prog.update(task, completed=completed_start+x)
+                    if frames[file] == 0:
+                        prog.update(cur,description=f"{filename} 已处理{x}帧")
+                    else:
+                        prog.update(cur,completed=x)
+                        prog.update(task, completed=completed_start+x)
                 
                 if CFG["save_to"] == "single":
                     t = process_video(file, root_dir/"Compress", update_progress)
@@ -372,7 +384,7 @@ def test():
         exit(-1)
     try:
         ret = subprocess.run(
-            "ffmpeg -hide_banner -f lavfi -i testsrc=duration=1:size=1920x1080:rate=30 -c:v libx264 -y -pix_fmt yuv420p compress_video_test.mp4",
+            "ffmpeg -hide_banner -f lavfi -i testsrc=duration=1:size=1920x1080:rate=30 -c:v libx264 -y -pix_fmt yuv420p compress_video_test.mp4".split(),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
