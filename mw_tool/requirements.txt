@@ -1,3 +1,5 @@
 streamlit>=1.28.0
 pubchempy>=1.0.4
-rdkit>=2022.9.5
+requests>=2.25.0
+Pillow>=8.0.0
+molmass
