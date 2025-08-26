@@ -13,7 +13,7 @@ else:
     CONFIG_NAME = Path(sys.path[0])/"config.json"
 
 DEFAULT_CONFIG = {
-    "save_to": "multi",
+    "save_to": "single",
     "crf": 18,
     "codec": "h264",        # could be h264, h264_qsv, h264_nvenc … etc.
     "ffmpeg": "ffmpeg",
