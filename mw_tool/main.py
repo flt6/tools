@@ -93,7 +93,7 @@ def get_pubchem_properties(cid:str) -> Dict[str, Optional[List[str]]]:
         }
 
 
-def search_compound(query: str, search_type: str = "name"):
+def search_compound(query: str, search_type: str = "name",use_word = False):
     """
     根据不同类型搜索化合物
     
@@ -106,7 +106,11 @@ def search_compound(query: str, search_type: str = "name"):
     """
     try:
         if search_type == "name":
-            compounds = pcp.get_compounds(query, 'name')
+            if use_word:
+                compounds = pcp.get_compounds(query, 'name',name_type="word")
+            else:
+                compounds = pcp.get_compounds(query, 'name')
+                
         elif search_type == "formula":
             compounds = pcp.get_compounds(query, 'formula')
         elif search_type == "smiles":
@@ -236,22 +240,6 @@ def reaction_table_page():
 
 ''')
 
-    # 初始化数据
-    if 'reaction_data' not in st.session_state:
-        df = pd.DataFrame([[None,None,None,None,None,None,None,None]],columns=[
-                "物质",
-                "分子量",
-                "当量",
-                "用量(mmol)",
-                "质量(g)",
-                "密度(g/mL)",
-                "体积(mL)",
-                "备注"
-        ],dtype="float")
-        df["物质"] = df["物质"].astype("string")
-        df["备注"] = df["备注"].astype("string")
-        st.session_state.reaction_data = df
-        
     
     st.info(f"💡 当量为0时，该物质不参与当量计算。")
     use_on_change = st.checkbox("立即计算", value=True)
@@ -654,6 +642,12 @@ def compound_search_page():
             f"输入{mp[search_type]}",
             placeholder="例如: ethanol, C2H6O, CCO"
         )
+        if search_type == "name" and query and not re.match(r"[a-zA-Z\d\-,\.]+",query):
+            use_tanslate = st.checkbox("使用翻译",True)
+        else:
+            use_tanslate = False
+        use_word = st.checkbox("使用关键词（仅当无法直接搜到时勾选，可能会找错化合物）")
+        
     
     search_button = st.button("🔍 搜索", type="primary")
     
@@ -667,7 +661,31 @@ def compound_search_page():
                 st.error(f"计算分子量时出错: {e}")
         else:
             with st.spinner("正在搜索..."):
-                _compound = search_compound(query, search_type)
+                _compound = None
+                if use_tanslate:
+                    try:
+                        req1 = requests.get(f"https://api.52vmy.cn/api/query/fanyi?msg={query}")
+                        req1.raise_for_status()
+                        trans = req1.json()["data"]["target"]
+                        _compound = search_compound(trans, search_type,use_word)
+                    except Exception as e:
+                        st.error("第一个翻译引擎发生错误")
+                        traceback.print_exc()
+                    if _compound is None:
+                        st.error("第一个翻译引擎失败")
+                        try:
+                            req1 = requests.get(f"https://v.api.aa1.cn/api/api-fanyi-yd/index.php?msg={query}&type=1")
+                            req1.raise_for_status()
+                            trans = req1.json()["text"]
+                            _compound = search_compound(trans, search_type,use_word)
+                        except Exception as e:
+                            st.error("第二个翻译引擎发生错误")
+                            traceback.print_exc()
+                        if _compound is None:
+                            st.error("所有翻译都失败了。")
+                    
+                if _compound is None:
+                    _compound = search_compound(query, search_type,use_word)
             
             print(_compound,search_type)
 
@@ -863,6 +881,22 @@ def compound_search_page():
 
 
 def main():
+    # initialize reaction data
+    if 'reaction_data' not in st.session_state:
+        df = pd.DataFrame([[None,None,None,None,None,None,None,None]],columns=[
+                "物质",
+                "分子量",
+                "当量",
+                "用量(mmol)",
+                "质量(g)",
+                "密度(g/mL)",
+                "体积(mL)",
+                "备注"
+        ],dtype="float")
+        df["物质"] = df["物质"].astype("string")
+        df["备注"] = df["备注"].astype("string")
+        st.session_state.reaction_data = df
+    
     st.set_page_config(
         page_title="有机合成用量计算工具",
         page_icon="🧪",
