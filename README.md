@@ -1,94 +1,98 @@
 # 个人使用小工具集
 
-## [修改连接数](changeConnectionLimit)
+## 系统工具
 
-win10修改wifi热点最大连接终端数
+### [修改连接数](changeConnectionLimit)
+修改Windows 10 WiFi热点最大连接终端数
 
-Usage：`main.bat`
+### [字体替换](change_font)
+OCR文字检测与自定义字体替换工具
 
-## [学*网预览下载](zxxk_dl)
+## 文件处理
 
-下载学*网资源，通过预览的形式，下载的文件以html形式保存。可以使用adobe Acrobat的打印转为pdf，文字版文件以svg下载，图片版原图。
+### [图片压缩](ImageCompress)
+批量图片压缩工具，支持精确大小控制
 
-1. 研究过程：[process.md](zxxk_dl/process.md)
+### [图片整理](tidy_img)
+按照手机照片视频命名规范自动分类整理文件
 
-2. usage: `python main.py`
-3. requirements: python, requests
+### [文件加密](encryptFiles)
+基于RSA的文件夹加密解密工具
 
-## adb快速传手机文件
+### [PDF解锁](pdf_unlock)
+移除PDF文件权限限制
 
-源文件丢了，TODO
+### [编码转换](recode)
+文本文件字符编码格式转换工具
 
-2024.7.14：放弃，已有项目[双轨快传](https://github.com/weixiansen574/HybridFileXfer)实现
+## 音视频处理
 
-## [并行auto-editor](mult)
+### [听力文件拆分](English_Listening_cut)
+英语听力考试音频自动分割工具
 
-并行运行auto-editor, 递归转码所有视频。（PS：网课时用的）
+### [批量视频处理](mult)
+使用auto-editor批量处理视频，去除静音片段
 
-### files
+### [视频剪切](video)
+简单的视频时间段剪切工具
 
-#### main.py
+### [视频时长调整](process_video)
+调整视频播放速度以达到目标时长
 
-主程序
+## 学习教育
 
-### main_up.py
+### [化学反应坐标图](cord)
+生成化学反应坐标图的Web工具
 
-使用hevc（CUDA）硬解码
+### [化学计算工具](mw_tool)
+化合物查询与分子量计算平台
 
-### usage
+### [座位表生成](seat_map)
+课堂座位安排自动生成工具
 
-`python main.py`
+### [任务分配系统](task_assignment)
+基于Web的任务分配管理系统
 
-## 菁*网题目下载
+### [学科网下载](zxxk_dl)
+学科网教育资源下载工具
 
+### [问卷星抓取](wjx)
+问卷星调查数据获取工具
+
+### [教务系统登录](jw)
+教务系统自动登录工具（URP新版，登录逆向，API在更改没有持续更新。但是核心算法没变）
+
+## 网络下载
+
+### [123pan下载](down)
+123pan云盘文件批量下载工具
+
+## 实用工具
+
+### [运动监控](move_warn)
+IP摄像头运动检测报警工具
+
+### [随机数生成](rand)
+交互式随机数生成器
+
+### [拼音转换](pinyin)
+中文姓名转拼音首字母工具
+
+### [对话转换](conversation_trans)
+对话数据转Markdown格式工具
+
+---
+
+## 已停止维护
+
+### adb快速传手机文件
+源文件丢了，已有项目[双轨快传](https://github.com/weixiansen574/HybridFileXfer)实现
+
+### 菁优网题目下载
 **ATTENTION：目前制作时的账号疑似被封禁，请谨慎使用**
 
-如需打印，请使用浏览器打印或转pdf
+### 检测视频是否破损（video_test）
+功能已整合到其他工具中
 
-### Usage
-
-菁优网任意界面，F12抓Cookie
-运行main.py，输入复制的内容，根据提示输入网址即可。
-
-### requements
-
-python, requests,bs4
-
-## [听力文件拆分](English_Listening_cut)
-
-基于学英语报的听力做听力文件拆解，拆分到每段对话
-
-### Usage
-
-`python main.py`
-
-## seat_map
-
-文档TODO
-
-## 简单运动报警(move_warn)
-
-对ip摄像头画面进行简单运动捕捉，核心代码来自网络。效果：运动达到一定范围，发出声音警告后自动关闭程序。
-
-### usage
-
-`python main.py`
-
-### requirements
-
-python, opencv
-
-## 检测视频是否破损（video_test）
-
-
-
-## 转移libcef.dll（move_CEF）
-
-通过Everything API遍历所有libcef.dll，核验md5后转移至指定文件夹并创建软连接。
-
-## [图片整理(tidy_img)](tidy_img)
-
-按照手机（华为）照片视频命名规范（例如`IMG_20170218_164951.jpg`，`VID_20220116_154728.mp4`）将其按年份分类，递归遍历所有文件。如果重复，文件相同<sup>[1]</sup>由用户判断是否删除相同文件。如果文件冲突<sup>[2]</sup>，放入conflict文件夹，并在文件名后加sha256前5位。
-
-[1]: 先判断文件大小，相同比较sha256值，如果均相同认为是同文件
-[2]: 上述标准任一不满足
+### 转移libcef.dll（move_CEF）
+通过Everything API遍历所有libcef.dll，核验md5后转移至指定文件夹并创建软连接

@@ -13,8 +13,8 @@ from Crypto.Util.Padding import pad
 from base64 import b64encode
 
 URL      = "http://[your libseat url]" 
-UID      = "[uid]"      # 图书馆账号
-PWD      = "[password]" # 图书馆密码
+# UID      = "[uid]"      # 图书馆账号
+PWD      = "000000" # 图书馆密码
 USERNAME = "[username]" # 验证码平台用户名
 PASSWORD = "[password]" # 验证码平台密码
 TOKEN    = "[token]"
@@ -171,8 +171,8 @@ def main(dep=0):
         print("正在尝试登录...")
         tried =0
         while token is None and tried <= 5:
-            id = UID
-            # id = str(random.choice(years)) + random.choice(house) + str(random.choice(classes)) + str(random.choice(num)).zfill(2)
+            # id = UID
+            id = str(random.choice(years)) + random.choice(house) + str(random.choice(classes)) + str(random.choice(num)).zfill(2)
             token = login(id,PWD)
             if token is None:
                 print("登陆失败：",token)

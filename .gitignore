@@ -9,3 +9,5 @@ __pycache__
 test
 .venv
 uv.lock
+.claude
+CLAUDE.md
