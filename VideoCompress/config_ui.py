@@ -22,10 +22,9 @@ class VideoConfig:
     crf: int = 18
     codec: str = "h264"
     ffmpeg: str = "ffmpeg"
-    video_ext: List[str] = None
-    extra: List[str] = None
+    video_ext: List[str] = [".mp4", ".mkv"]
+    extra: List[str] = []
     manual: Optional[List[str]] = None
-    train: bool = False
     bitrate: Optional[str] = None
     
     def __post_init__(self):
@@ -550,9 +549,6 @@ class ConfigUI(QMainWindow):
         group.addLayout(custom_layout)
         
         # 实验性功能
-        self.train_checkbox = QCheckBox("启用训练模式 (实验性)")
-        self.train_checkbox.setToolTip("实验性功能，可能不稳定")
-        group.addWidget(self.train_checkbox)
         
         return group
     
@@ -775,7 +771,6 @@ class ConfigUI(QMainWindow):
         if self.config.manual:
             self.custom_edit.setText(" ".join(self.config.manual))
         
-        self.train_checkbox.setChecked(self.config.train)
     
     def _save_config(self):
         """保存配置"""
@@ -841,7 +836,6 @@ class ConfigUI(QMainWindow):
             if custom_text:
                 config.manual = custom_text.split()
             
-            config.train = self.train_checkbox.isChecked()
             
             # 保存文件
             config_path = self._get_config_path()
