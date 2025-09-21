@@ -34,3 +34,7 @@ streamlit run app.py
 ## 已知限制
 - 目录页码通常为 PDF 内部页码（从 1 开始），个别 PDF 的 TOC 可能与实际页面偏移不一致。
 - 页面范围切片依赖 TOC 顺序，若 TOC 不规范可能导致范围不准。
+
+## 说明
+
+使用streamlit_pdf_viewer而不是官方的streamlit_pdf，是因为在手机上，streamlit_pdf无法显示。
