@@ -1,0 +1,7 @@
+logs
+test
+config.json
+*.xml
+tmp
+build
+dist
