@@ -33,7 +33,12 @@ CFG = {
 }
 
 
-def get_cmd(video_path,output_file):
+def get_cmd(video_path:str|Path,output_file:str|Path) -> list[str]:
+    if isinstance(video_path, Path):
+        video_path = str(video_path.resolve())
+    if isinstance(output_file, Path):
+        output_file = str(output_file.resolve())
+        
     if CFG["manual"] is not None:
         command=[
             CFG["ffmpeg"],  
@@ -131,6 +136,7 @@ def process_video(
     output_file = compress_dir / (video_path.stem + video_path.suffix)
     if output_file.is_file():
         logging.warning(f"文件{output_file}存在，跳过")
+        return
     
     video_path_str = str(video_path.absolute())
     command = get_cmd(video_path_str,output_file)
@@ -235,6 +241,7 @@ def traverse_directory(root_dir: Path):
                     frames[file] = 0
         if 0 in frames.values():
             logging.warning(f"视频{', '.join([f.name for f,frames in frames.items() if frames==0])}文件帧数信息获取失败。总进度估计将不准确。")
+        prog.remove_task(task)
     try:
         info_file.write_bytes(dumps(frames))
         logging.debug("Saved video info to cache.")
