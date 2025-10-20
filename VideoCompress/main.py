@@ -279,11 +279,12 @@ def traverse_directory(root_dir: Path):
                     prog.update(main_task, completed=completed_start+x)
             
             if CFG["save_to"] == "single":
-                process_video(file, root_dir/"Compress", update_progress)
+                process_video(file, root_dir/CFG["compress_dir_name"], update_progress)
             else:
                 process_video(file, None, update_progress)
 
             # 移除文件级进度条
+            prog.update(main_task, completed=completed_start+frames[file])
             prog.remove_task(file_task)
     
     try:
