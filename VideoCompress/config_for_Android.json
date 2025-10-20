@@ -1,0 +1,10 @@
+{
+    "save_to": "single",
+    "bitrate": "3M",
+    "codec": "h264_mediacodec",
+    "ffmpeg": "ffmpeg",
+    "video_ext": [
+        ".mp4",
+        ".mkv"
+    ],
+}
