@@ -1,12 +1,21 @@
 {
     "save_to": "single",
-    "crf": 18,
-    "codec": "h264",
+    "bitrate": "3M",
+    "codec": "h264_qsv",
+    "hwaccel": "qsv",
+    "extra": [],
     "ffmpeg": "ffmpeg",
+    "manual": null,
     "video_ext": [
         ".mp4",
         ".mkv"
     ],
-    "extra": [],
-    "train": false
+    "compress_dir_name": "compress_qsv",
+    "resolution": null,
+    "fps": "30",
+    "test_video_resolution": "1920x1080",
+    "test_video_fps": "30",
+    "test_video_input": "compress_video_test.mp4",
+    "test_video_output": "compressed_video_test.mp4",
+    "disable_hwaccel_when_fail": true
 }

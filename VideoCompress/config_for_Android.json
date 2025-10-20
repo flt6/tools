@@ -2,9 +2,11 @@
     "save_to": "single",
     "bitrate": "3M",
     "codec": "h264_mediacodec",
+    "hwaccel": "mediacodec",
     "ffmpeg": "ffmpeg",
     "video_ext": [
         ".mp4",
         ".mkv"
     ],
+    "resolution": null
 }

@@ -19,17 +19,19 @@ CFG = {
     "crf":"18",
     "bitrate": None,
     "codec": "h264",
+    "hwaccel": None,
     "extra": [],
     "ffmpeg": "ffmpeg",
     "manual": None,
     "video_ext": [".mp4", ".mkv"],
     "compress_dir_name": "compress",
-    "resolution": "-1:1080",
+    "resolution": None,
     "fps": "30",
     "test_video_resolution": "1920x1080",
     "test_video_fps": "30",
     "test_video_input": "compress_video_test.mp4",
     "test_video_output": "compressed_video_test.mp4",
+    "disable_hwaccel_when_fail": True,
 }
 
 
@@ -49,12 +51,20 @@ def get_cmd(video_path:str|Path,output_file:str|Path) -> list[str]:
         command.append(output_file)
         return command
     
+    command = [
+        CFG["ffmpeg"],  
+        "-hide_banner",
+    ]
+    if CFG["hwaccel"] is not None:
+        command.extend([
+            "-hwaccel", CFG["hwaccel"],
+        ])
+    command.extend([
+        "-i", video_path,
+    ])
+
     if CFG["bitrate"] is not None:
-        command = [
-            CFG["ffmpeg"],  
-            "-hide_banner",
-            "-i", video_path,
-        ]
+        
         if CFG['resolution'] is not None:
             command.extend([
             "-vf", f"scale={CFG['resolution']}",])
@@ -65,11 +75,6 @@ def get_cmd(video_path:str|Path,output_file:str|Path) -> list[str]:
             "-y",
         ])
     else:
-        command = [
-            CFG["ffmpeg"],  
-            "-hide_banner",
-            "-i", video_path,
-            ]
         if CFG['resolution'] is not None:
             command.extend([
             "-vf", f"scale={CFG['resolution']}",])
@@ -136,7 +141,7 @@ def process_video(
     output_file = compress_dir / (video_path.stem + video_path.suffix)
     if output_file.is_file():
         logging.warning(f"文件{output_file}存在，跳过")
-        return
+        return False
     
     video_path_str = str(video_path.absolute())
     command = get_cmd(video_path_str,output_file)
@@ -150,15 +155,19 @@ def process_video(
             text=True
         )
         
+        total = ""
         while result.poll() is None:
             line = " "
             while result.poll() is None and line[-1:] not in "\r\n":
                 assert result.stderr is not None
                 line+=result.stderr.read(1)
+                total+=line[-1]
                 # print(line[-1])
             if 'warning' in line.lower():
                 logging.warning(f"[FFmpeg]({video_path_str}): {line}")
             elif 'error' in line.lower():
+                logging.error(f"[FFmpeg]({video_path_str}): {line}")
+            elif "assertion" in line.lower():
                 logging.error(f"[FFmpeg]({video_path_str}): {line}")
             elif "frame=" in line and update_func is not None:
                 # print(line,end="")
@@ -171,14 +180,48 @@ def process_video(
 
         if result.returncode != 0:
             logging.error(f"处理文件 {video_path_str} 失败，返回码: {result.returncode}，cmd={' '.join(command)}")
-            logging.error(result.stdout)
-            logging.error(result.stderr)
+            output_file.unlink(missing_ok=True)
+            assert result.stdout is not None
+            logging.error(result.stdout.read())
+            logging.error(total)
+            if CFG["hwaccel"] == "mediacodec" and CFG["codec"] in ["h264_mediacodec","hevc_mediacodec"]:
+                logging.info("mediacodec硬件加速器已知在较短片段上存在异常，将禁用加速重试。")
+                output_file.unlink(missing_ok=True)
+                bak = CFG.copy()
+                CFG["hwaccel"] = None
+                CFG["codec"] = "h264" if CFG["codec"]=="h264_mediacodec" else "hevc"
+                assert not output_file.exists()
+                ret = process_video(video_path,compress_dir,update_func)
+                CFG.update(bak)
+                if not ret:
+                    logging.error("重试仍然失败。")
+                    return False
+                else:
+                    return True
+            elif CFG["disable_hwaccel_when_fail"]:
+                logging.info("正在禁用硬件加速器重试，进度条可能发生混乱。")
+                output_file.unlink(missing_ok=True)
+                bak = CFG.copy()
+                CFG["hwaccel"] = None
+                if CFG['codec'].endswith("_mediacodec") or \
+                  CFG['codec'].endswith("_qsv") or \
+                  CFG['codec'].endswith("_nvenc") or\
+                  CFG['codec'].endswith("_amf"):
+                    CFG["codec"] = CFG["codec"].split("_")[0]
+                assert not output_file.exists()
+                ret = process_video(video_path,compress_dir,update_func)
+                CFG.update(bak) 
+                if not ret:
+                    logging.error("重试仍然失败。")
+                    return False
         else:
             logging.debug(f"文件处理成功: {video_path_str} -> {output_file}")
             
     except KeyboardInterrupt as e:raise e
     except Exception as e:
         logging.error(f"执行 ffmpeg 命令时发生异常, 文件：{str(video_path_str)}，cmd={' '.join(map(str,command))}",exc_info=e)
+        return False
+    return True
 
 def traverse_directory(root_dir: Path):
     video_extensions = set(CFG["video_ext"])
@@ -203,13 +246,15 @@ def traverse_directory(root_dir: Path):
 
     # 获取视频信息
     frames: dict[Path, float] = {}
+    cached_data: dict[Path, float] = {}
     info_file = Path("video_info.cache")
     if info_file.is_file():
         try:
             cached_data = loads(info_file.read_bytes())
             if isinstance(cached_data, dict):
-                frames = cached_data
                 logging.debug("Loaded video info from cache.")
+            else:
+                cached_data = {}
         except Exception as e:
             logging.debug("Failed to load video info cache.",exc_info=e)
     
@@ -217,7 +262,8 @@ def traverse_directory(root_dir: Path):
         task = prog.add_task("正在获取视频信息", total=len(video_files))
         for file in video_files:
             prog.advance(task)
-            if file in frames and frames[file]>0:
+            if file in cached_data and cached_data[file]>0:
+                frames[file] = cached_data[file]
                 continue
             cmd = f'ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate,duration -of default=nokey=1:noprint_wrappers=1'.split()
             cmd.append(str(file.resolve()))
@@ -361,6 +407,13 @@ def main(_root = None):
         except Exception as e:
             logging.warning("Invalid config file, ignored.")
             logging.debug(e)
+    else:
+        try:
+            import json
+            CFG_FILE.write_text(json.dumps(CFG,indent=4))
+            logging.info("Config file created.")
+        except Exception as e:
+            logging.warning("Failed to create config file.",exc_info=e)
     
     if _root is not None:
         root = Path(_root)
