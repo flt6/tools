@@ -89,6 +89,7 @@ def get_cmd(video_path,output_file):
     
     command.extend(CFG["extra"])
     command.append(output_file)
+    logging.debug(f"Create CMD: {command}")
     return command
 
 
@@ -161,7 +162,8 @@ def cpu_monitor():
         except KeyboardInterrupt as e:
             raise e
         except Exception as e:
-            logging.error(f"CPU监控异常: {e}")
+            pass
+            #logging.error(f"CPU监控异常: {e}")
         
         # 等待下一次监控
         threading.Event().wait(CFG["cpu_monitor_interval"])
@@ -302,7 +304,7 @@ def traverse_directory(root_dir: Path):
     que = list(root_dir.glob("*"))
     while que:
         d = que.pop()
-        for file in d.glob("*"):
+        for file in d.glob("*") if d.is_dir() else [d]:
             if file.parent.name == CFG["compress_dir_name"] or file.name == CFG["compress_dir_name"]:
                 continue
             if file.is_file() and file.suffix.lower() in video_extensions:
@@ -324,8 +326,8 @@ def traverse_directory(root_dir: Path):
         for file in video_files:
             prog.advance(task)
             cmd = f'ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate,duration -of default=nokey=1:noprint_wrappers=1'.split()
-            cmd.append(str(file))
-            proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            cmd.append(str(file.resolve()))
+            proc = subprocess.run(cmd, capture_output=True, text=True)
             if proc.returncode != 0:
                 logging.debug(f"无法获取视频信息: {file}, 返回码: {proc.returncode}")
                 frames[file] = 0
