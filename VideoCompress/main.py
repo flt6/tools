@@ -8,7 +8,7 @@ from time import time
 from rich.logging import RichHandler
 from rich.progress import Progress
 from pickle import dumps, loads
-from typing import Optional
+from typing import Optional,Callable
 import atexit
 import re
 
@@ -111,14 +111,17 @@ def fmt_time(t:float|int) -> str:
     else:
         return f"{round(t)}s"
 
-def process_video(video_path: Path, compress_dir:Optional[Path]=None ,update_func=None):
-    use=None
-    sz=video_path.stat().st_size//(1024*1024)
+def process_video(
+    video_path: Path, 
+    compress_dir:Optional[Path]=None ,
+    update_func:Optional[Callable[[Optional[int],Optional[str]],None]]=None):
+    
     
     if compress_dir is None:
         # 在视频文件所在目录下创建 compress 子目录（如果不存在）
         compress_dir = video_path.parent / CFG["compress_dir_name"]
     else:
+        assert root
         compress_dir /= video_path.parent.relative_to(root)
     
     assert isinstance(compress_dir,Path)
@@ -128,7 +131,6 @@ def process_video(video_path: Path, compress_dir:Optional[Path]=None ,update_fun
     output_file = compress_dir / (video_path.stem + video_path.suffix)
     if output_file.is_file():
         logging.warning(f"文件{output_file}存在，跳过")
-        return use
     
     video_path_str = str(video_path.absolute())
     command = get_cmd(video_path_str,output_file)
@@ -145,19 +147,21 @@ def process_video(video_path: Path, compress_dir:Optional[Path]=None ,update_fun
         while result.poll() is None:
             line = " "
             while result.poll() is None and line[-1:] not in "\r\n":
+                assert result.stderr is not None
                 line+=result.stderr.read(1)
                 # print(line[-1])
             if 'warning' in line.lower():
                 logging.warning(f"[FFmpeg]({video_path_str}): {line}")
             elif 'error' in line.lower():
                 logging.error(f"[FFmpeg]({video_path_str}): {line}")
-            elif "frame=" in line:
+            elif "frame=" in line and update_func is not None:
                 # print(line,end="")
                 match = re.search(r"frame=\s*(\d+)",line)
-                if match:
-                    frame_number = int(match.group(1))
-                    if update_func is not None:
-                        update_func(frame_number)
+                frame_number = int(match.group(1)) if match else None
+                
+                match = re.search(r"[\d\.]+x",line)
+                rate = match.group(0) if match  else None
+                update_func(frame_number,rate)
 
         if result.returncode != 0:
             logging.error(f"处理文件 {video_path_str} 失败，返回码: {result.returncode}，cmd={' '.join(command)}")
@@ -169,7 +173,6 @@ def process_video(video_path: Path, compress_dir:Optional[Path]=None ,update_fun
     except KeyboardInterrupt as e:raise e
     except Exception as e:
         logging.error(f"执行 ffmpeg 命令时发生异常, 文件：{str(video_path_str)}，cmd={' '.join(map(str,command))}",exc_info=e)
-    return use
 
 def traverse_directory(root_dir: Path):
     video_extensions = set(CFG["video_ext"])
@@ -260,12 +263,12 @@ def traverse_directory(root_dir: Path):
             
             with prog._lock:
                 completed_start = prog._tasks[main_task].completed
-                
-            def update_progress(x):
+
+            def update_progress(x, rate):
                 if frames[file] == 0:
-                    prog.update(file_task,description=f"{filename} 已处理{x}帧")
+                    prog.update(file_task,description=f"{filename} 已处理{x}帧 {f'速率{rate}' if rate else ''}")
                 else:
-                    prog.update(file_task,completed=x)
+                    prog.update(file_task,completed=x,description=f"{filename} {f'速率{rate}' if rate else ''}")
                     prog.update(main_task, completed=completed_start+x)
             
             if CFG["save_to"] == "single":
