@@ -1,6 +1,7 @@
 {
     "save_to": "single",
-    "bitrate": "3M",
+    "bitrate": null,
+    "crf": 26,
     "codec": "h264_qsv",
     "hwaccel": "qsv",
     "extra": [],

@@ -11,6 +11,7 @@ from pickle import dumps, loads
 from typing import Optional, Callable
 import atexit
 import re
+import get_frame
 
 root = None
 CFG_FILE = Path(sys.path[0]) / "config.json"
@@ -56,6 +57,9 @@ def get_cmd(video_path: str | Path, output_file: str | Path) -> list[str]:
             [
                 "-hwaccel",
                 CFG["hwaccel"],
+                "-hwaccel_output_format",
+                CFG["hwaccel"],
+                
             ]
         )
     command.extend(
@@ -198,12 +202,13 @@ def process_video(
 
         if result.returncode != 0:
             logging.error(
-                f"处理文件 {video_path_str} 失败，返回码: {result.returncode}，cmd={' '.join(command)}"
+                f"处理文件 {video_path_str} 失败"
             )
+            logging.debug(f"返回码: {result.returncode}; cmd={' '.join(command)}")
             output_file.unlink(missing_ok=True)
             assert result.stdout is not None
-            logging.error(result.stdout.read())
-            logging.error(total)
+            logging.debug(result.stdout.read())
+            logging.debug(total)
             if CFG["hwaccel"] == "mediacodec" and CFG["codec"] in [
                 "h264_mediacodec",
                 "hevc_mediacodec",
@@ -223,7 +228,7 @@ def process_video(
                     return False
                 else:
                     return True
-            elif CFG["disable_hwaccel_when_fail"]:
+            elif CFG["disable_hwaccel_when_fail"] and CFG["hwaccel"] is not None:
                 logging.info("正在禁用硬件加速器重试，进度条可能发生混乱。")
                 output_file.unlink(missing_ok=True)
                 bak = CFG.copy()
@@ -259,7 +264,7 @@ def traverse_directory(root_dir: Path):
     video_extensions = set(CFG["video_ext"])
     sm = None
     # 获取视频文件列表和帧数信息
-    video_files = []
+    video_files:list[Path] = []
     que = list(root_dir.glob("*"))
     while que:
         d = que.pop()
@@ -274,9 +279,9 @@ def traverse_directory(root_dir: Path):
             elif file.is_dir():
                 que.append(file)
 
-        if not video_files:
-            logging.warning("未找到需要处理的视频文件")
-            return
+    if not video_files:
+        logging.warning("未找到需要处理的视频文件")
+        return
 
     # 获取视频信息
     frames: dict[Path, float] = {}
@@ -299,28 +304,12 @@ def traverse_directory(root_dir: Path):
             if file in cached_data and cached_data[file] > 0:
                 frames[file] = cached_data[file]
                 continue
-            cmd = f"ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate,duration -of default=nokey=1:noprint_wrappers=1".split()
-            cmd.append(str(file.resolve()))
-            proc = subprocess.run(cmd, capture_output=True, text=True)
-            if proc.returncode != 0:
-                logging.debug(f"无法获取视频信息: {file}, 返回码: {proc.returncode}")
-                frames[file] = 0
-                continue
-            if proc.stdout.strip():
-                try:
-                    avg_frame_rate, duration = proc.stdout.strip().split("\n")
-                    tmp = avg_frame_rate.split("/")
-                    avg_frame_rate = float(tmp[0]) / float(tmp[1])
-                    if duration == "N/A":
-                        duration = 0
-                        logging.debug(
-                            f"无法获取视频信息: {file}, 时长为N/A，默认使用0s"
-                        )
-                    duration = float(duration)
-                    frames[file] = duration * avg_frame_rate
-                except (ValueError, IndexError) as e:
-                    logging.debug(f"解析视频信息失败: {file}, 错误: {e}")
-                    frames[file] = 0
+            fr = get_frame.get_video_frame_count(str(file.resolve()))
+            if fr is None:
+                logging.debug(
+                    f"无法获取视频信息: {file}, 时长为N/A，默认使用0s"
+                )
+            frames[file] = 0 if fr is None else fr
         if 0 in frames.values():
             logging.warning(
                 f"视频{', '.join([f.name for f,frames in frames.items() if frames==0])}文件帧数信息获取失败。总进度估计将不准确。"
@@ -512,4 +501,5 @@ def main(_root=None):
 
 
 if __name__ == "__main__":
+    sys.argv.append(r'C:\Users\flt\Documents\WeChat Files\wxid_m8h0igh8p52p22\FileStorage\Video')
     main()
