@@ -5,7 +5,8 @@
     "codec": "h264_qsv",
     "hwaccel": "qsv",
     "extra": [],
-    "ffmpeg": "ffmpeg",
+    "ffmpeg": "C:/tools/ffmpeg/bin/ffmpeg.exe",
+    "ffprobe": "C:/tools/ffmpeg/bin/ffprobe",
     "manual": null,
     "video_ext": [
         ".mp4",

@@ -1,19 +1,18 @@
 import json
-import shutil
+import logging
 import subprocess
 from fractions import Fraction
 from decimal import Decimal
 from typing import Optional, Tuple
 
+ffprobe:str = "ffprobe"
 class FFProbeError(RuntimeError):
     pass
 
 def _run_ffprobe(args: list[str]) -> dict:
     """运行 ffprobe 并以 JSON 返回，若失败抛异常。"""
-    if not shutil.which("ffprobe"):
-        raise FileNotFoundError("未找到 ffprobe，请先安装 FFmpeg 并确保 ffprobe 在 PATH 中。")
     # 始终要求 JSON 输出，便于稳健解析
-    base = ["ffprobe", "-v", "error", "-print_format", "json"]
+    base = [ffprobe, "-v", "error", "-print_format", "json"]
     proc = subprocess.run(base + args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     if proc.returncode != 0:
         raise FFProbeError(proc.stderr.strip() or "ffprobe 调用失败")
@@ -30,6 +29,7 @@ def _try_nb_frames(path: str, stream_index: int) -> Optional[int]:
     ])
     streams = data.get("streams") or []
     if not streams:
+        logging.debug("_try_nb_frames: failed no stream")
         return None
     nb = streams[0].get("nb_frames")
     if nb and nb != "N/A":
@@ -37,7 +37,9 @@ def _try_nb_frames(path: str, stream_index: int) -> Optional[int]:
             n = int(nb)
             return n if n >= 0 else None
         except ValueError:
+            logging.debug(f"_try_nb_frames: failed nb not positive int: {nb}")
             return None
+    logging.debug(f"_try_nb_frames: failed nb NA: {nb}")
     return None
 
 def _try_avgfps_times_duration(path: str, stream_index: int) -> Optional[int]:
@@ -58,6 +60,7 @@ def _try_avgfps_times_duration(path: str, stream_index: int) -> Optional[int]:
     f = _run_ffprobe(["-show_entries", "format=duration", path])
     dur_str = (f.get("format") or {}).get("duration")
     if not dur_str:
+        logging.debug(f"_try_avgfps_times_duration: failed no dur_str, {f}")
         return None
 
     try:
@@ -66,7 +69,8 @@ def _try_avgfps_times_duration(path: str, stream_index: int) -> Optional[int]:
         # 四舍五入到最近整数，避免系统性低估
         est = int(dur * Decimal(fps.numerator) / Decimal(fps.denominator) + Decimal("0.5"))
         return est if est >= 0 else None
-    except Exception:
+    except Exception as e:
+        logging.debug("_try_avgfps_times_duration: failed",exc_info=e)
         return None
 
 def _try_count_packets(path: str, stream_index: int) -> Optional[int]:
@@ -79,12 +83,14 @@ def _try_count_packets(path: str, stream_index: int) -> Optional[int]:
     ])
     streams = data.get("streams") or []
     if not streams:
+        logging.debug("_try_count_packets: failed no stream")
         return None
     nbp = streams[0].get("nb_read_packets")
     try:
         n = int(nbp)
         return n if n >= 0 else None
-    except Exception:
+    except Exception as e:
+        logging.debug("_try_count_packets: failed",exc_info=e)
         return None
 
 def get_video_frame_count(
@@ -116,12 +122,17 @@ def get_video_frame_count(
     }
 
     for key in fallback_order:
-        func = methods.get(key)
-        if not func:
-            continue
-        n = func(path, stream_index)
-        if isinstance(n, int) and n >= 0:
-            return n
+        try:
+            func = methods.get(key)
+            if not func:
+                continue
+            n = func(path, stream_index)
+            if isinstance(n, int) and n >= 0:
+                return n
+            else:
+                logging.debug(f"Failed to get frame with {key}")
+        except Exception as e:
+            logging.debug(f"Errored to get frame with {key}.",exc_info=e)
 
     return None
     raise RuntimeError("无法获取或估计帧数：所有回退方法均失败。")
