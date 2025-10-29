@@ -1,8 +1,39 @@
 import PyPDF2  # PyMuPDF
 import sys
 from pathlib import Path
+from typing import Optional
 
-def copy_pdf_pages(input_path: str, output_path: str) -> bool:
+def add_outlines(
+        reader_obj:PyPDF2.PdfReader, 
+        writer_obj:PyPDF2.PdfWriter,
+        outlines:Optional[list] = None, 
+        parent=None
+    ):
+    
+    if outlines is None:
+        outlines = reader_obj.outline
+    last = None
+    for it in outlines:
+        if isinstance(it, list):
+            add_outlines(reader_obj, writer_obj ,it, last)
+            continue
+        
+        title = getattr(it, 'title', None)
+        if title is None:
+            try:
+                title = str(it)
+            except Exception as e:
+                raise e
+                continue
+
+        page_num = reader_obj.get_destination_page_number(it)
+        if page_num is None:
+            continue
+        
+        last = writer_obj.add_outline_item(title, page_num, parent=parent)
+    
+
+def copy_pdf_pages(input_path: Path, output_path: Path) -> bool:
     """
     移除PDF文件的所有限制
     
@@ -23,6 +54,14 @@ def copy_pdf_pages(input_path: str, output_path: str) -> bool:
             # 复制所有页面
             for page in reader.pages:
                 writer.add_page(page)
+
+            # 复制书签（如果有）
+            
+            try:
+                add_outlines(reader, writer)
+            except Exception as e:
+                raise e
+                print(f"警告：{input_path.name}书签处理失败.")
             
             # 写入新文件（不设置任何加密或限制）
             with open(output_path, 'wb') as output_file:
@@ -32,6 +71,7 @@ def copy_pdf_pages(input_path: str, output_path: str) -> bool:
             
     except Exception as e:
         print(f"移除PDF限制时发生错误: {e}")
+        raise e
         return False
 
 # def copy_pdf_pages(input_file, output_file):
