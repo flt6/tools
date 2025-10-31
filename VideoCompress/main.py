@@ -12,7 +12,6 @@ from typing import Optional, Callable,Literal
 import atexit
 import re
 import get_frame
-import pydantic as pyd
 from pydantic import BaseModel,Field,field_validator,model_validator
 
 class Config(BaseModel):
@@ -80,7 +79,10 @@ class Config(BaseModel):
     
 
 root = None
-CFG_FILE = Path(sys.path[0]) / "config.json"
+if os.environ.get("INSTALL", "0") == "1":
+    CFG_FILE= Path(os.getenv("APPDATA", "C:/")) / "VideoCompress" / "config.json"
+else:
+    CFG_FILE= Path(sys.path[0]) / "config.json"
 CFG = {
     "save_to": "single",
     "crf": "18",
