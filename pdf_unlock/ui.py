@@ -5,11 +5,13 @@ import traceback
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import customtkinter as ctk
+import sys
 
 from tkinterdnd2 import TkinterDnD, DND_FILES  # type: ignore
 DND_AVAILABLE = True
 
 from main import copy_pdf_pages  # type: ignore
+from main import main as dummy_main  # to avoid linter error
 
 APP_TITLE = "PDF 解锁（拖入即可）"
 SUFFIX = "_decrypt"
@@ -145,4 +147,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv)>=2:
+        dummy_main()
+    else:
+        main()
