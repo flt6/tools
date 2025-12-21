@@ -15,7 +15,6 @@ import queue
 import psutil
 
 root = None
-CFG_FILE = Path(sys.path[0])/"config.json"
 CFG = {
     "save_to": "single",
     "crf":"18",
@@ -44,6 +43,13 @@ cpu_monitor_thread = None
 cpu_monitor_lock = threading.Lock()
 current_instances = 0
 instance_lock = threading.Lock()
+
+def get_config_path() -> Path:
+    """获取配置文件路径"""
+    if os.environ.get("INSTALL", "0") == "1":
+        return Path(os.getenv("APPDATA", "C:/")) / "VideoCompress" / "config.json"
+    else:
+        return Path("config.json").resolve()
 
 def get_cmd(video_path,output_file):
     if CFG["manual"] is not None:
@@ -296,10 +302,9 @@ def process_video(video_path: Path, compress_dir:Optional[Path]=None, update_fun
 def traverse_directory(root_dir: Path):
     global current_instances
     video_extensions = set(CFG["video_ext"])
-    sm=None
     # 获取视频文件列表和帧数信息
     video_files = []
-    que = list(root_dir.glob("*"))
+    que = [root_dir]
     while que:
         d = que.pop()
         for file in d.glob("*"):
@@ -535,10 +540,10 @@ def main(_root = None):
     logging.info("-------------------------------")
     logging.info(datetime.now().strftime('Video Compress started at %Y/%m/%d %H:%M'))
     
-    if CFG_FILE.exists():
+    if get_config_path().exists():
         try:
             import json
-            cfg:dict = json.loads(CFG_FILE.read_text())
+            cfg:dict = json.loads(get_config_path().read_text())
             CFG.update(cfg)
         except KeyboardInterrupt as e:raise e
         except Exception as e:

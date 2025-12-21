@@ -7,6 +7,5 @@
         ".mp4",
         ".mkv"
     ],
-    "extra": [],
-    "train": false
+    "extra": []
 }
